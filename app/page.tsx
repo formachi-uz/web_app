@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { getCategories, getProducts, getReviews } from '@/lib/db'
 import ProductCard from '@/components/ProductCard'
 
-export const revalidate = 60 // har 60 soniyada yangilanadi
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function HomePage() {
   const [categories, products, reviews] = await Promise.all([
