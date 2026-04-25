@@ -169,6 +169,19 @@ body {
   z-index: 0;
   opacity: 0.4;
 }
+.category-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
 
+.category-card:hover {
+  border-color: rgba(0, 229, 160, 0.4);
+  background: rgba(0, 229, 160, 0.04);
+  transform: translateY(-2px);
+}
 /* Star rating */
 .stars { color: #ffa502; letter-spacing: 2px; }
