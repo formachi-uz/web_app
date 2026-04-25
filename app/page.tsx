@@ -145,6 +145,12 @@ export default async function HomePage() {
           }}>
             {categories.map((cat, i) => (
               <Link key={cat.id} href={`/catalog?category=${cat.id}`} style={{ textDecoration: 'none' }}>
+               <div
+                  className="category-card"
+                    style={{
+                      animationDelay: `${i * 0.1}s`,
+  }}
+> 
                 <div style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
@@ -153,18 +159,7 @@ export default async function HomePage() {
                   transition: 'all 0.2s',
                   animationDelay: `${i * 0.1}s`,
                 }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.borderColor = 'rgba(0,229,160,0.4)'
-                    el.style.background = 'rgba(0,229,160,0.04)'
-                    el.style.transform = 'translateY(-2px)'
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.borderColor = 'var(--border)'
-                    el.style.background = 'var(--surface)'
-                    el.style.transform = 'translateY(0)'
-                  }}
+                
                 >
                   <div style={{ fontSize: 36, marginBottom: 12 }}>{cat.emoji}</div>
                   <h3 style={{
