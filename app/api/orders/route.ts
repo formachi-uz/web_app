@@ -8,6 +8,8 @@ const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID    || '-5194049252'
 const GLAVNIY_ADMIN   = process.env.GLAVNIY_ADMIN_ID || '8156792282'
 
 async function sendTelegram(chat_id: string, text: string, photo?: string) {
+  if (!BOT_TOKEN) return
+
   const base = `https://api.telegram.org/bot${BOT_TOKEN}`
 
   if (photo) {
@@ -42,6 +44,9 @@ export async function POST(req: NextRequest) {
     // Validatsiya
     if (!customer_name || !customer_phone || !address || !payment_type || !items?.length) {
       return NextResponse.json({ error: "Ma'lumotlar to'liq emas" }, { status: 400 })
+    }
+    if (!items.every((item: any) => item.product_id && item.qty > 0 && item.price >= 0)) {
+      return NextResponse.json({ error: "Savat ma'lumotlari noto'g'ri" }, { status: 400 })
     }
 
     // DB ga saqlash
