@@ -10,7 +10,14 @@ export default function Navbar() {
     <nav className="site-nav">
       <div className="container nav-inner">
         <Link href="/" className="brand-link">
-          <img src="/formachi-logo.svg" alt="Formachi" className="brand-logo" />
+          <img
+            src="/logo.png"
+            alt="Formachi"
+            className="brand-logo"
+            onError={(event) => {
+              event.currentTarget.src = '/formachi-logo.svg'
+            }}
+          />
           <span className="brand-word">
             FORMACHI
           </span>
