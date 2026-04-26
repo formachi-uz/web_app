@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createOrder } from '@/lib/db'
+import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
-const BOT_TOKEN       = process.env.BOT_TOKEN!
-const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID    || '-5194049252'
-const GLAVNIY_ADMIN   = process.env.GLAVNIY_ADMIN_ID || '8156792282'
+const BOT_TOKEN = process.env.BOT_TOKEN!
+const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID || '-5194049252'
+const GLAVNIY_ADMIN = process.env.GLAVNIY_ADMIN_ID || '8156792282'
 
 function orderActionsKeyboard(orderId: number) {
   return {
@@ -67,7 +68,6 @@ export async function POST(req: NextRequest) {
 
     const paymentLabel = payment_type === 'card' ? '💳 Karta / Paynet' : '🤝 Uzum Nasiya'
     const nasiyaNote = payment_type === 'credit' ? '\n⚠️ <b>UZUM NASIYA — aloqaga chiqing!</b>' : ''
-
     let cartLines = ''
     let firstPhoto: string | undefined
 
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, order_id: orderId, telegram_notified: telegramOk })
   } catch (error) {
     console.error('Orders API error:', error)
+    await notifyAdminError('Orders API error', error)
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 })
   }
 }
