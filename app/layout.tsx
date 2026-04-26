@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
+import CartAnalytics from '@/components/CartAnalytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,20 +18,15 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uz">
       <body className="noise">
         <Navbar />
-        <main style={{ paddingTop: '70px' }}>
-          {children}
-        </main>
+        <main style={{ paddingTop: '70px' }}>{children}</main>
         <Footer />
         <CartDrawer />
+        <CartAnalytics />
       </body>
     </html>
   )
