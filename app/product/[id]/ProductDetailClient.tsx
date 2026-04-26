@@ -93,7 +93,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             }}>
               {product.photo_url ? (
                 <img
-                  src={`https://api.telegram.org/file/bot${process.env.NEXT_PUBLIC_BOT_TOKEN}/${product.photo_url}`}
+                  src={`/api/photo?file_id=${product.photo_url}`}
                   alt={product.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={e => { e.currentTarget.style.display = 'none' }}

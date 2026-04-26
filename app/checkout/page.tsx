@@ -156,7 +156,7 @@ export default function CheckoutPage() {
             <h1 style={{
               fontFamily: 'var(--font-display)', fontSize: 36,
               letterSpacing: 1, marginBottom: 32,
-            }}>BUYURTMA MA'LUMOTLARI</h1>
+            }}>BUYURTMA MA&apos;LUMOTLARI</h1>
 
             {/* Savat xulosa */}
             <div style={{
@@ -201,7 +201,7 @@ export default function CheckoutPage() {
                 <label style={{
                   display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10,
                   letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8,
-                }}>To'liq ism *</label>
+                }}>To&apos;liq ism *</label>
                 <input className="input" placeholder="Masalan: Musurmon Husanov"
                   value={form.name} onChange={e => updateForm('name', e.target.value)} required />
               </div>
@@ -237,7 +237,7 @@ export default function CheckoutPage() {
             <h1 style={{
               fontFamily: 'var(--font-display)', fontSize: 36,
               letterSpacing: 1, marginBottom: 8,
-            }}>TO'LOV USULI</h1>
+            }}>TO&apos;LOV USULI</h1>
             <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 32 }}>
               Qulay to'lov usulini tanlang
             </p>

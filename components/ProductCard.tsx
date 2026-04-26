@@ -27,7 +27,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', background: 'var(--surface2)' }}>
           {product.photo_url ? (
             <img
-              src={`https://api.telegram.org/file/bot${process.env.NEXT_PUBLIC_BOT_TOKEN}/${product.photo_url}`}
+              src={`/api/photo?file_id=${product.photo_url}`}
               alt={product.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
               onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
