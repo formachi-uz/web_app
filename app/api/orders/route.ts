@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createOrder } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 const BOT_TOKEN       = process.env.BOT_TOKEN!
 const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID    || '-5194049252'
 const GLAVNIY_ADMIN   = process.env.GLAVNIY_ADMIN_ID || '8156792282'
