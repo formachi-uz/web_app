@@ -220,6 +220,8 @@ export async function createOrder(data: {
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'`
     )
     const orderColumns = new Set(orderColumnRows.map((row: { column_name: string }) => row.column_name))
+    const statusValue = await getEnumCompatibleValue(client, 'orders', 'status', 'pending')
+    const paymentValue = await getEnumCompatibleValue(client, 'orders', 'payment_type', data.payment_type)
     const orderInsertColumns: string[] = []
     const orderInsertValues: Array<string | number | null> = []
 
@@ -231,8 +233,8 @@ export async function createOrder(data: {
     }
 
     addOrderValue('user_id', userId)
-    addOrderValue('status', 'pending')
-    addOrderValue('payment_type', data.payment_type)
+    addOrderValue('status', statusValue)
+    addOrderValue('payment_type', paymentValue)
     addOrderValue('payment_method', data.payment_type)
     addOrderValue('delivery_address', data.address)
     addOrderValue('address', data.address)
@@ -300,4 +302,30 @@ export async function createOrder(data: {
   } finally {
     client.release()
   }
+}
+
+async function getEnumCompatibleValue(
+  client: any,
+  tableName: string,
+  columnName: string,
+  value: string
+): Promise<string> {
+  const { rows } = await client.query(
+    `SELECT e.enumlabel
+     FROM pg_attribute a
+     JOIN pg_class c ON c.oid = a.attrelid
+     JOIN pg_type t ON t.oid = a.atttypid
+     JOIN pg_enum e ON e.enumtypid = t.oid
+     WHERE c.relname = $1 AND a.attname = $2
+     ORDER BY e.enumsortorder`,
+    [tableName, columnName]
+  )
+
+  const labels = rows.map((row: { enumlabel: string }) => row.enumlabel)
+  if (labels.includes(value)) return value
+
+  const upperValue = value.toUpperCase()
+  if (labels.includes(upperValue)) return upperValue
+
+  return value
 }
