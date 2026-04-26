@@ -1,39 +1,22 @@
 'use client'
 import Link from 'next/link'
-import { ShoppingCart, Menu, X } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@/lib/cart'
-import { useState } from 'react'
 
 export default function Navbar() {
   const count = useCart((s) => s.count())
-  const [open, setOpen] = useState(false)
 
   return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      background: 'rgba(7,7,9,0.85)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid var(--border)',
-      height: '70px',
-    }}>
-      <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-
-        {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-display)', fontSize: 20, color: '#000',
-            fontWeight: 700,
-          }}>F</div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 2, color: 'var(--text)' }}>
+    <nav className="site-nav">
+      <div className="container nav-inner">
+        <Link href="/" className="brand-link">
+          <img src="/formachi-logo.svg" alt="Formachi" className="brand-logo" />
+          <span className="brand-word">
             FORMACHI
           </span>
         </Link>
 
-        {/* Desktop nav */}
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }} className="hidden md:flex">
+        <div className="nav-links">
           {[
             { href: '/', label: 'Bosh sahifa' },
             { href: '/catalog', label: 'Katalog' },
@@ -51,14 +34,13 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Cart + Telegram */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="nav-actions">
           <a
             href="https://t.me/Formachi_uzBot"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
-            style={{ padding: '8px 16px', fontSize: 12 }}
+            style={{ padding: '8px 14px', fontSize: 12 }}
           >
             ⚡ Bot orqali buyurtma
           </a>
