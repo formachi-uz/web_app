@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import pool from '@/lib/db'
+import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,8 @@ const allowedEvents = new Set([
   'order_submitted',
   'check_uploaded',
   'checkout_error',
+  'begin_checkout',
+  'abandoned_cart_signal',
 ])
 
 export async function POST(req: NextRequest) {
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Analytics API error:', error)
+    await notifyAdminError('Analytics API error', error)
     return NextResponse.json({ success: false }, { status: 200 })
   }
 }
