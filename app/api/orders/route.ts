@@ -46,14 +46,7 @@ async function sendTelegram(chat_id: string, text: string, orderId: number, phot
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const {
-      customer_name,
-      customer_phone,
-      address,
-      payment_type,
-      items,
-      total,
-    } = body
+    const { customer_name, customer_phone, address, payment_type, items, total } = body
 
     if (!customer_name || !customer_phone || !address || !payment_type || !items?.length) {
       return NextResponse.json({ error: "Ma'lumotlar to'liq emas" }, { status: 400 })
@@ -73,21 +66,20 @@ export async function POST(req: NextRequest) {
     })
 
     const paymentLabel = payment_type === 'card' ? '💳 Karta / Paynet' : '🤝 Uzum Nasiya'
-    const nasiyaNote   = payment_type === 'credit' ? '\n⚠️ <b>UZUM NASIYA — aloqaga chiqing!</b>' : ''
+    const nasiyaNote = payment_type === 'credit' ? '\n⚠️ <b>UZUM NASIYA — aloqaga chiqing!</b>' : ''
 
     let cartLines = ''
     let firstPhoto: string | undefined
 
     for (const item of items) {
-      const extra = [
-        item.size ? `(${item.size})` : '',
-        item.back_print ? `✍️ ${item.back_print}` : '',
-      ].filter(Boolean).join(' | ')
+      const extra = [item.size ? `(${item.size})` : '', item.back_print ? `✍️ ${item.back_print}` : '']
+        .filter(Boolean)
+        .join(' | ')
       cartLines += `• ${item.name}${extra ? ' ' + extra : ''} × ${item.qty} = ${(item.price * item.qty).toLocaleString()} so'm\n`
       if (!firstPhoto && item.photo_url) firstPhoto = item.photo_url
     }
 
-    const adminText = (
+    const adminText =
       `🌐 <b>SAYTDAN BUYURTMA #${orderId}</b>${nasiyaNote}\n` +
       `${'─'.repeat(28)}\n` +
       `👤 ${customer_name}\n` +
@@ -99,17 +91,18 @@ export async function POST(req: NextRequest) {
       cartLines +
       `${'─'.repeat(28)}\n` +
       `💰 <b>JAMI: ${total.toLocaleString()} so'm</b>`
-    )
 
     const targets = [...new Set([GROUP_ORDERS_ID, GLAVNIY_ADMIN])]
     const telegramResults = await Promise.allSettled(
       targets.map((id) => sendTelegram(id, adminText, orderId, firstPhoto))
     )
+    const telegramOk = telegramResults.filter((result) => result.status === 'fulfilled').length
+    console.log(`Order #${orderId} saved. Telegram notified: ${telegramOk}/${targets.length}`)
     telegramResults.forEach((result) => {
       if (result.status === 'rejected') console.error('Telegram order notify error:', result.reason)
     })
 
-    return NextResponse.json({ success: true, order_id: orderId })
+    return NextResponse.json({ success: true, order_id: orderId, telegram_notified: telegramOk })
   } catch (error) {
     console.error('Orders API error:', error)
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 })
