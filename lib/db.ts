@@ -188,13 +188,31 @@ export async function createOrder(data: {
   try {
     await client.query('BEGIN')
 
-    // User topish yoki yaratish
+    const userTelegramId =
+      data.telegram_id || -Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 1000)
+    const { rows: userColumnRows } = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'`
+    )
+    const userColumns = new Set(userColumnRows.map((row: { column_name: string }) => row.column_name))
+    const userInsertColumns = ['telegram_id', 'full_name']
+    const userInsertValues: Array<string | number> = [userTelegramId, data.customer_name]
+
+    if (userColumns.has('phone')) {
+      userInsertColumns.push('phone')
+      userInsertValues.push(data.customer_phone)
+    } else if (userColumns.has('phone_number')) {
+      userInsertColumns.push('phone_number')
+      userInsertValues.push(data.customer_phone)
+    }
+
+    const placeholders = userInsertValues.map((_, index) => `$${index + 1}`).join(', ')
+
+    // User yaratish. Saytdan kelgan har buyurtma uchun alohida vaqtinchalik telegram_id ishlatiladi.
     const userRes = await client.query(
-      `INSERT INTO users (telegram_id, full_name)
-       VALUES ($1, $2)
-       ON CONFLICT (telegram_id) DO UPDATE SET full_name = $2
+      `INSERT INTO users (${userInsertColumns.join(', ')})
+       VALUES (${placeholders})
        RETURNING id`,
-      [data.telegram_id || 0, data.customer_name]
+      userInsertValues
     )
     const userId = userRes.rows[0].id
 
@@ -208,12 +226,36 @@ export async function createOrder(data: {
     )
     const orderId = orderRes.rows[0].id
 
+    const { rows: itemColumnRows } = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'order_items'`
+    )
+    const itemColumns = new Set(itemColumnRows.map((row: { column_name: string }) => row.column_name))
+
     // Order items
     for (const item of data.items) {
+      const itemInsertColumns = ['order_id', 'product_id', 'quantity', 'price_at_order', 'size']
+      const itemInsertValues: Array<string | number | null> = [
+        orderId,
+        item.product_id,
+        item.qty,
+        item.price,
+        item.size,
+      ]
+
+      if (itemColumns.has('player_name')) {
+        itemInsertColumns.push('player_name')
+        itemInsertValues.push(item.back_print)
+      } else if (itemColumns.has('back_print')) {
+        itemInsertColumns.push('back_print')
+        itemInsertValues.push(item.back_print)
+      }
+
+      const itemPlaceholders = itemInsertValues.map((_, index) => `$${index + 1}`).join(', ')
+
       await client.query(
-        `INSERT INTO order_items (order_id, product_id, quantity, price_at_order, size, player_name)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [orderId, item.product_id, item.qty, item.price, item.size, item.back_print]
+        `INSERT INTO order_items (${itemInsertColumns.join(', ')})
+         VALUES (${itemPlaceholders})`,
+        itemInsertValues
       )
     }
 
