@@ -270,6 +270,10 @@ body {
     grid-template-columns: 1fr;
     gap: 22px;
   }
+  div[style*="grid-template-columns: minmax(0,1fr) minmax(0,1fr)"] {
+    grid-template-columns: 1fr !important;
+    gap: 22px !important;
+  }
   .product-image-frame {
     max-width: 420px;
     margin: 0 auto;
