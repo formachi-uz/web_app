@@ -216,13 +216,46 @@ export async function createOrder(data: {
     )
     const userId = userRes.rows[0].id
 
+    const { rows: orderColumnRows } = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'`
+    )
+    const orderColumns = new Set(orderColumnRows.map((row: { column_name: string }) => row.column_name))
+    const orderInsertColumns: string[] = []
+    const orderInsertValues: Array<string | number | null> = []
+
+    const addOrderValue = (column: string, value: string | number | null) => {
+      if (orderColumns.has(column)) {
+        orderInsertColumns.push(column)
+        orderInsertValues.push(value)
+      }
+    }
+
+    addOrderValue('user_id', userId)
+    addOrderValue('status', 'pending')
+    addOrderValue('payment_type', data.payment_type)
+    addOrderValue('payment_method', data.payment_type)
+    addOrderValue('delivery_address', data.address)
+    addOrderValue('address', data.address)
+    addOrderValue('comment', `Ism: ${data.customer_name} | Tel: ${data.customer_phone}`)
+    addOrderValue('customer_name', data.customer_name)
+    addOrderValue('customer_phone', data.customer_phone)
+    addOrderValue('phone', data.customer_phone)
+    addOrderValue('total_price', data.total)
+    addOrderValue('total', data.total)
+    addOrderValue('total_amount', data.total)
+
+    if (orderInsertColumns.length === 0) {
+      throw new Error('orders jadvali ustunlari topilmadi')
+    }
+
+    const orderPlaceholders = orderInsertValues.map((_, index) => `$${index + 1}`).join(', ')
+
     // Order yaratish
     const orderRes = await client.query(
-      `INSERT INTO orders (user_id, status, payment_type, delivery_address, comment, total_price)
-       VALUES ($1, 'pending', $2, $3, $4, $5)
+      `INSERT INTO orders (${orderInsertColumns.join(', ')})
+       VALUES (${orderPlaceholders})
        RETURNING id`,
-      [userId, data.payment_type, data.address,
-       `Ism: ${data.customer_name} | Tel: ${data.customer_phone}`, data.total]
+      orderInsertValues
     )
     const orderId = orderRes.rows[0].id
 
