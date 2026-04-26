@@ -106,11 +106,11 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="container" style={{ padding: '40px 24px', maxWidth: 640 }}>
+      <div className="container checkout-container" style={{ maxWidth: 640 }}>
 
         {/* ─── Steps indicator ─────────────────────────────────────────────── */}
         {step !== 'success' && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 40, alignItems: 'center' }}>
+          <div className="checkout-steps" style={{ display: 'flex', gap: 8, marginBottom: 40, alignItems: 'center' }}>
             {['info', 'payment'].map((s, i) => (
               <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{
@@ -233,7 +233,7 @@ export default function CheckoutPage() {
 
         {/* ─── Step 2: To'lov ─────────────────────────────────────────────── */}
         {step === 'payment' && (
-          <div>
+          <div className="checkout-payment">
             <h1 style={{
               fontFamily: 'var(--font-display)', fontSize: 36,
               letterSpacing: 1, marginBottom: 8,
@@ -242,11 +242,12 @@ export default function CheckoutPage() {
               Qulay to'lov usulini tanlang
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="payment-options">
               {/* Karta */}
               <button
                 disabled={loading}
                 onClick={() => handlePayment('card')}
+                className="payment-option"
                 style={{
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 12, padding: 24, cursor: 'pointer',
@@ -264,15 +265,15 @@ export default function CheckoutPage() {
                   el.style.background = 'var(--surface)'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{
+                <div className="payment-option-inner">
+                  <div className="payment-icon" style={{
                     width: 48, height: 48, borderRadius: 10,
                     background: 'rgba(0,229,160,0.1)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <CreditCard size={22} color="var(--accent)" />
                   </div>
-                  <div>
+                  <div className="payment-copy">
                     <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
                       💳 Karta / Paynet
                     </div>
@@ -287,6 +288,7 @@ export default function CheckoutPage() {
               <button
                 disabled={loading}
                 onClick={() => handlePayment('credit')}
+                className="payment-option"
                 style={{
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 12, padding: 24, cursor: 'pointer',
@@ -304,15 +306,15 @@ export default function CheckoutPage() {
                   el.style.background = 'var(--surface)'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{
+                <div className="payment-option-inner">
+                  <div className="payment-icon" style={{
                     width: 48, height: 48, borderRadius: 10,
                     background: 'rgba(0,229,160,0.1)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Handshake size={22} color="var(--accent)" />
                   </div>
-                  <div>
+                  <div className="payment-copy">
                     <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>
                       🤝 Uzum Nasiya
                     </div>
