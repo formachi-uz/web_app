@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,10 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // File path olish
-    const fileRes = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`
-    )
+    const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`)
     const fileData = await fileRes.json()
 
     if (!fileData.ok) {
@@ -26,8 +24,6 @@ export async function GET(req: NextRequest) {
 
     const filePath = fileData.result.file_path
     const photoUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`
-
-    // Rasmni olish va qaytarish
     const photoRes = await fetch(photoUrl)
     const photoBuffer = await photoRes.arrayBuffer()
     const contentType = photoRes.headers.get('content-type') || 'image/jpeg'
@@ -35,11 +31,12 @@ export async function GET(req: NextRequest) {
     return new NextResponse(photoBuffer, {
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400', // 1 kun cache
+        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
       },
     })
   } catch (error) {
     console.error('Photo proxy error:', error)
+    await notifyAdminError('Photo proxy error', error, { fileId })
     return new NextResponse('Xato', { status: 500 })
   }
 }
