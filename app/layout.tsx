@@ -4,6 +4,8 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Formachi.uz — Sport Kiyimlari',
   description: 'Formalar, retro kiyimlar, butsalar. Tez yetkazish. Yuqori sifat.',
