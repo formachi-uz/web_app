@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, ChevronLeft, CreditCard, Handshake } from 'lucide-react'
 import { useCart } from '@/lib/cart'
+import { CartItem } from '@/lib/db'
+import { trackEvent } from '@/lib/analytics'
 
 const PAYNET_LINK =
   "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
@@ -15,7 +17,6 @@ type PaymentType = 'card' | 'credit'
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart()
   const router = useRouter()
-
   const [step, setStep] = useState<Step>('info')
   const [orderId, setOrderId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -23,16 +24,11 @@ export default function CheckoutPage() {
   const [checkFile, setCheckFile] = useState<File | null>(null)
   const [checkLoading, setCheckLoading] = useState(false)
   const [checkMessage, setCheckMessage] = useState('')
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    paymentType: '' as PaymentType | '',
-  })
+  const [submittedItems, setSubmittedItems] = useState<CartItem[]>([])
+  const [submittedTotal, setSubmittedTotal] = useState(0)
+  const [form, setForm] = useState({ name: '', phone: '', address: '', paymentType: '' as PaymentType | '' })
 
-  const updateForm = (key: string, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
-  }
+  const updateForm = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }))
 
   const handleInfoSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -41,14 +37,16 @@ export default function CheckoutPage() {
       return
     }
     setError('')
+    trackEvent('checkout_step', { step: 'payment', items_count: items.length, total: total() })
     setStep('payment')
   }
 
   const handlePayment = async (paymentType: PaymentType) => {
     setLoading(true)
     setError('')
-
     try {
+      const orderItems = [...items]
+      const orderTotal = total()
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,8 +55,8 @@ export default function CheckoutPage() {
           customer_phone: form.phone,
           address: form.address,
           payment_type: paymentType,
-          items,
-          total: total(),
+          items: orderItems,
+          total: orderTotal,
         }),
       })
       const data = await res.json()
@@ -68,9 +66,18 @@ export default function CheckoutPage() {
       updateForm('paymentType', paymentType)
       setCheckFile(null)
       setCheckMessage('')
+      setSubmittedItems(orderItems)
+      setSubmittedTotal(orderTotal)
+      trackEvent('order_submitted', {
+        order_id: data.order_id,
+        payment_type: paymentType,
+        items_count: orderItems.length,
+        total: orderTotal,
+      })
       clearCart()
       setStep('success')
     } catch (err: any) {
+      trackEvent('checkout_error', { message: err.message, payment_type: paymentType })
       setError(err.message)
     } finally {
       setLoading(false)
@@ -82,10 +89,8 @@ export default function CheckoutPage() {
       setCheckMessage('Iltimos, chek rasmini tanlang')
       return
     }
-
     setCheckLoading(true)
     setCheckMessage('')
-
     try {
       const payload = new FormData()
       payload.append('order_id', String(orderId))
@@ -99,7 +104,9 @@ export default function CheckoutPage() {
 
       setCheckFile(null)
       setCheckMessage('✅ Chek qabul qilindi. Admin tekshiradi.')
+      trackEvent('check_uploaded', { order_id: orderId })
     } catch (err: any) {
+      trackEvent('checkout_error', { message: err.message, order_id: orderId, type: 'check_upload' })
       setCheckMessage(err.message)
     } finally {
       setCheckLoading(false)
@@ -110,12 +117,8 @@ export default function CheckoutPage() {
     return (
       <div style={{ textAlign: 'center', padding: '120px 24px' }}>
         <div style={{ fontSize: 64, marginBottom: 20 }}>🛒</div>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 12 }}>
-          SAVAT BO'SH
-        </h2>
-        <Link href="/catalog" className="btn btn-primary" style={{ marginTop: 8 }}>
-          Katalogga o'tish →
-        </Link>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 12 }}>SAVAT BO'SH</h2>
+        <Link href="/catalog" className="btn btn-primary" style={{ marginTop: 8 }}>Katalogga o'tish →</Link>
       </div>
     )
   }
@@ -125,19 +128,7 @@ export default function CheckoutPage() {
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '20px 0' }}>
         <div className="container">
           {step !== 'success' && (
-            <button
-              onClick={() => (step === 'payment' ? setStep('info') : router.back())}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                color: 'var(--muted)',
-                fontSize: 13,
-              }}
-            >
+            <button onClick={() => (step === 'payment' ? setStep('info') : router.back())} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 13 }}>
               <ChevronLeft size={16} /> Orqaga
             </button>
           )}
@@ -152,135 +143,53 @@ export default function CheckoutPage() {
           <form onSubmit={handleInfoSubmit}>
             <Title>BUYURTMA MA&apos;LUMOTLARI</Title>
             <CartSummary items={items} total={total()} />
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
-              <Field label="To'liq ism *">
-                <input
-                  className="input"
-                  placeholder="Masalan: Musurmon Husanov"
-                  value={form.name}
-                  onChange={(event) => updateForm('name', event.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Telefon *">
-                <input
-                  className="input"
-                  placeholder="+998 93 107 13 08"
-                  type="tel"
-                  value={form.phone}
-                  onChange={(event) => updateForm('phone', event.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Yetkazish manzili *">
-                <textarea
-                  className="input"
-                  placeholder="Viloyat, tuman, aniq manzil&#10;Masalan: Samarqand viloyati, Tayloq tumani, Musurmon"
-                  value={form.address}
-                  onChange={(event) => updateForm('address', event.target.value)}
-                  rows={3}
-                  required
-                  style={{ resize: 'vertical' }}
-                />
-              </Field>
+              <Field label="To'liq ism *"><input className="input" placeholder="Masalan: Musurmon Husanov" value={form.name} onChange={(e) => updateForm('name', e.target.value)} required /></Field>
+              <Field label="Telefon *"><input className="input" placeholder="+998 93 107 13 08" type="tel" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} required /></Field>
+              <Field label="Yetkazish manzili *"><textarea className="input" placeholder="Viloyat, tuman, aniq manzil&#10;Masalan: Samarqand viloyati, Tayloq tumani, Musurmon" value={form.address} onChange={(e) => updateForm('address', e.target.value)} rows={3} required style={{ resize: 'vertical' }} /></Field>
             </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: 15 }}>
-              Davom etish →
-            </button>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: 15 }}>Davom etish →</button>
           </form>
         )}
 
         {step === 'payment' && (
           <div className="checkout-payment">
             <Title>TO&apos;LOV USULI</Title>
-            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 32 }}>
-              Qulay to'lov usulini tanlang
-            </p>
-
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 32 }}>Qulay to'lov usulini tanlang</p>
             <div className="payment-options">
-              <PaymentButton
-                title="💳 Karta / Paynet"
-                description="To'lov linki yuboriladi. Chek talab qilinadi."
-                icon={<CreditCard size={22} color="var(--accent)" />}
-                loading={loading}
-                onClick={() => handlePayment('card')}
-              />
-              <PaymentButton
-                title="🤝 Uzum Nasiya"
-                description="Admin tez orada siz bilan bog'lanadi"
-                icon={<Handshake size={22} color="var(--accent)" />}
-                loading={loading}
-                onClick={() => handlePayment('credit')}
-              />
+              <PaymentButton title="💳 Karta / Paynet" description="To'lov linki yuboriladi. Chek talab qilinadi." icon={<CreditCard size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('card')} />
+              <PaymentButton title="🤝 Uzum Nasiya" description="Admin tez orada siz bilan bog'lanadi" icon={<Handshake size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('credit')} />
             </div>
-
-            {loading && (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--muted)', fontSize: 13 }}>
-                ⏳ Buyurtma yuborilmoqda...
-              </div>
-            )}
+            {loading && <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--muted)', fontSize: 13 }}>⏳ Buyurtma yuborilmoqda...</div>}
           </div>
         )}
 
         {step === 'success' && (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div className="success-mark">
-              <CheckCircle size={40} color="var(--accent)" />
-            </div>
+            <div className="success-mark"><CheckCircle size={40} color="var(--accent)" /></div>
             <h1 className="success-title">QABUL QILINDI!</h1>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 8 }}>
-              Buyurtma <strong style={{ color: 'var(--text)' }}>#{orderId}</strong> muvaffaqiyatli yuborildi
-            </p>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 8 }}>Buyurtma <strong style={{ color: 'var(--text)' }}>#{orderId}</strong> muvaffaqiyatli yuborildi</p>
+            <OrderSummary items={submittedItems} total={submittedTotal} paymentType={form.paymentType} phone={form.phone} address={form.address} />
 
             {form.paymentType === 'card' ? (
               <div className="success-card">
                 <div style={{ fontWeight: 600, marginBottom: 8 }}>💳 To'lovni amalga oshiring</div>
-                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-                  Paynet orqali to'lang, keyin chek rasmini shu yerga yuklang
-                </p>
-                <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-                  💳 Paynet orqali to'lash
-                </a>
+                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>Paynet orqali to'lang, keyin chek rasmini shu yerga yuklang</p>
+                <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-primary">💳 Paynet orqali to'lash</a>
                 <div className="check-upload-box">
-                  <label className="check-upload-label">
-                    Chek rasmini yuklang
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(event) => setCheckFile(event.target.files?.[0] || null)}
-                    />
-                  </label>
+                  <label className="check-upload-label">Chek rasmini yuklang<input type="file" accept="image/*,.pdf" onChange={(event) => setCheckFile(event.target.files?.[0] || null)} /></label>
                   {checkFile && <div className="check-upload-file">{checkFile.name}</div>}
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={!checkFile || checkLoading}
-                    onClick={handleCheckUpload}
-                    style={{ width: '100%', marginTop: 12 }}
-                  >
-                    {checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}
-                  </button>
+                  <button type="button" className="btn btn-secondary" disabled={!checkFile || checkLoading} onClick={handleCheckUpload} style={{ width: '100%', marginTop: 12 }}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
                   {checkMessage && <div className="check-upload-message">{checkMessage}</div>}
                 </div>
               </div>
             ) : (
-              <div className="success-card">
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>🤝 Uzum Nasiya</div>
-                <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-                  Admin tez orada siz bilan bog'lanib, nasiya shartlarini tushuntiradi
-                </p>
-              </div>
+              <div className="success-card"><div style={{ fontWeight: 600, marginBottom: 8 }}>🤝 Uzum Nasiya</div><p style={{ color: 'var(--muted)', fontSize: 13 }}>Admin tez orada siz bilan bog'lanib, nasiya shartlarini tushuntiradi</p></div>
             )}
 
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link href="/catalog" className="btn btn-secondary">
-                Katalogga qaytish
-              </Link>
-              <a href="https://t.me/formachi_admin" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
-                💬 Admin bilan bog'lanish
-              </a>
+              <Link href="/catalog" className="btn btn-secondary">Katalogga qaytish</Link>
+              <a href="https://t.me/formachi_admin" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">💬 Admin bilan bog'lanish</a>
             </div>
           </div>
         )}
@@ -289,110 +198,41 @@ export default function CheckoutPage() {
   )
 }
 
-function Title({ children }: { children: React.ReactNode }) {
+function OrderSummary({ items, total, paymentType, phone, address }: { items: CartItem[]; total: number; paymentType: PaymentType | ''; phone: string; address: string }) {
+  if (!items.length) return null
   return (
-    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, letterSpacing: 1, marginBottom: 32 }}>
-      {children}
-    </h1>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label>
-      <span className="field-label">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function Alert({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        background: 'rgba(255,71,87,0.08)',
-        border: '1px solid rgba(255,71,87,0.2)',
-        color: 'var(--danger)',
-        padding: '12px 16px',
-        borderRadius: 8,
-        fontSize: 13,
-        marginBottom: 20,
-      }}
-    >
-      {children}
+    <div className="order-summary">
+      <div className="summary-label">Buyurtma xulosasi</div>
+      {items.map((item, index) => (
+        <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ✍️${item.back_print}` : ''} × {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>
+      ))}
+      <div className="summary-meta"><span>📱 {phone}</span><span>{paymentType === 'card' ? '💳 Paynet' : '🤝 Uzum Nasiya'}</span></div>
+      <div className="summary-address">📍 {address}</div>
+      <div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div>
     </div>
   )
 }
 
+function Title({ children }: { children: React.ReactNode }) {
+  return <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 36, letterSpacing: 1, marginBottom: 32 }}>{children}</h1>
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label><span className="field-label">{label}</span>{children}</label>
+}
+function Alert({ children }: { children: React.ReactNode }) {
+  return <div style={{ background: 'rgba(255,71,87,0.08)', border: '1px solid rgba(255,71,87,0.2)', color: 'var(--danger)', padding: '12px 16px', borderRadius: 8, fontSize: 13, marginBottom: 20 }}>{children}</div>
+}
 function Steps({ current }: { current: Step }) {
   const steps: Step[] = ['info', 'payment']
-  return (
-    <div className="checkout-steps">
-      {steps.map((step, index) => {
-        const active = current === step
-        const done = index < steps.indexOf(current)
-        return (
-          <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className={active || done ? 'step-dot step-dot-active' : 'step-dot'}>{index + 1}</div>
-            <span className={active ? 'step-label step-label-active' : 'step-label'}>
-              {step === 'info' ? "Ma'lumotlar" : "To'lov"}
-            </span>
-            {index < steps.length - 1 && <div className={done ? 'step-line step-line-active' : 'step-line'} />}
-          </div>
-        )
-      })}
-    </div>
-  )
+  return <div className="checkout-steps">{steps.map((step, index) => {
+    const active = current === step
+    const done = index < steps.indexOf(current)
+    return <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className={active || done ? 'step-dot step-dot-active' : 'step-dot'}>{index + 1}</div><span className={active ? 'step-label step-label-active' : 'step-label'}>{step === 'info' ? "Ma'lumotlar" : "To'lov"}</span>{index < steps.length - 1 && <div className={done ? 'step-line step-line-active' : 'step-line'} />}</div>
+  })}</div>
 }
-
-function CartSummary({ items, total }: { items: any[]; total: number }) {
-  return (
-    <div className="summary-card">
-      <div className="summary-label">Savatingiz</div>
-      {items.map((item, index) => (
-        <div key={index} className="summary-row">
-          <span>
-            {item.name}
-            {item.size ? ` (${item.size})` : ''}
-            {item.back_print ? ` | ✍️${item.back_print}` : ''} × {item.qty}
-          </span>
-          <span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
-            {(item.price * item.qty).toLocaleString()}
-          </span>
-        </div>
-      ))}
-      <div className="summary-total">
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>
-          {total.toLocaleString()} so'm
-        </span>
-      </div>
-    </div>
-  )
+function CartSummary({ items, total }: { items: CartItem[]; total: number }) {
+  return <div className="summary-card"><div className="summary-label">Savatingiz</div>{items.map((item, index) => <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ✍️${item.back_print}` : ''} × {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>)}<div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div></div>
 }
-
-function PaymentButton({
-  title,
-  description,
-  icon,
-  loading,
-  onClick,
-}: {
-  title: string
-  description: string
-  icon: React.ReactNode
-  loading: boolean
-  onClick: () => void
-}) {
-  return (
-    <button disabled={loading} onClick={onClick} className="payment-option">
-      <div className="payment-option-inner">
-        <div className="payment-icon">{icon}</div>
-        <div className="payment-copy">
-          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>{description}</div>
-        </div>
-      </div>
-    </button>
-  )
+function PaymentButton({ title, description, icon, loading, onClick }: { title: string; description: string; icon: React.ReactNode; loading: boolean; onClick: () => void }) {
+  return <button disabled={loading} onClick={onClick} className="payment-option"><div className="payment-option-inner"><div className="payment-icon">{icon}</div><div className="payment-copy"><div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{title}</div><div style={{ fontSize: 12, color: 'var(--muted)' }}>{description}</div></div></div></button>
 }
