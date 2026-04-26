@@ -1,0 +1,8 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="256" height="256" rx="28" fill="#06243C"/>
+  <path d="M41 88C70 79 89 62 103 43H153C167 62 186 79 215 88V146C215 188 181 220 128 235C75 220 41 188 41 146V88Z" stroke="#F8F4EA" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M89 92L109 74H147L167 92L155 118L144 110V170H112V110L101 118L89 92Z" fill="#F8F4EA"/>
+  <path d="M116 101H157C164 101 168 106 166 113L162 127H132L129 139H156L152 155H125L119 181H91L116 101Z" fill="#06243C"/>
+  <rect x="39" y="170" width="178" height="43" rx="5" fill="#06243C" stroke="#F8F4EA" stroke-width="10"/>
+  <text x="128" y="201" text-anchor="middle" fill="#F8F4EA" font-family="Arial Black, Arial, sans-serif" font-size="28" font-weight="900" letter-spacing="2">FORMACHI</text>
+</svg>
