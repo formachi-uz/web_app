@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,8 +9,8 @@ const GROUP_CHECKS_ID = process.env.GROUP_CHECKS_ID || '-1003912030329'
 function checkActionsKeyboard(orderId: string) {
   return {
     inline_keyboard: [[
-      { text: "✅ Chekni tasdiqlash", callback_data: `check_confirm_${orderId}` },
-      { text: "❌ Rad etish", callback_data: `check_reject_${orderId}` },
+      { text: '✅ Chekni tasdiqlash', callback_data: `check_confirm_${orderId}` },
+      { text: '❌ Rad etish', callback_data: `check_reject_${orderId}` },
     ]],
   }
 }
@@ -28,15 +29,14 @@ export async function POST(req: NextRequest) {
     const file = formData.get('check') as File | null
 
     if (!orderId || !file) {
-      return NextResponse.json({ error: "Chek fayli topilmadi" }, { status: 400 })
+      return NextResponse.json({ error: 'Chek fayli topilmadi' }, { status: 400 })
     }
 
-    const caption = (
+    const caption =
       `💳 <b>YANGI CHEK — Buyurtma #${orderId}</b>\n` +
       `${'─'.repeat(24)}\n` +
       `👤 ${customerName || 'Sayt mijozi'}\n` +
       `📱 ${customerPhone || '—'}`
-    )
 
     const telegramForm = new FormData()
     telegramForm.append('chat_id', GROUP_CHECKS_ID)
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Checks API error:', error)
+    await notifyAdminError('Checks API error', error)
     return NextResponse.json({ error: 'Chek yuborishda xato yuz berdi' }, { status: 500 })
   }
 }
