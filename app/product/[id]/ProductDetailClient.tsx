@@ -19,9 +19,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const router = useRouter()
 
   const hasDiscount = product.discount_percent > 0
-  const isForma = [1, 2].includes(product.category_id)
-  const availableStocks = product.stocks.filter((s) => s.quantity > 0)
-  const totalStock = availableStocks.reduce((sum, stock) => sum + stock.quantity, 0)
+  const customizationStatus = product.customization_status ?? 'not_available'
+  const canCustomize = product.is_customizable || customizationStatus !== 'not_available'
+  const customizationPrice = customizationStatus === 'included_bonus' ? 0 : Number(product.customization_price ?? 50000)
+  const stocks = product.stocks ?? []
+  const availableStocks = stocks.filter((stock) => (stock.available ?? stock.quantity) > 0)
+  const totalStock = availableStocks.reduce((sum, stock) => sum + (stock.available ?? stock.quantity), 0)
   const stockLabel = totalStock === 0 ? 'Tugagan' : totalStock <= 3 ? `Kam qoldi: ${totalStock} ta` : 'Sotuvda bor'
   const previewSlots = product.photo_url ? ['Asosiy', 'Detal', 'Komplekt'] : ['FORMACHI']
   const telegramUrl = `https://t.me/Formachi_uzBot?start=product_${product.id}`
@@ -49,16 +52,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       alert("O'lchamni tanlang!")
       return
     }
-    if (isForma && backPrint === null) {
+    if (canCustomize && backPrint === null) {
       alert('Ism yozish haqida qaror qiling!')
       return
     }
-    if (isForma && backPrint && !printName.trim()) {
+    if (canCustomize && backPrint && !printName.trim()) {
       alert('Ism va raqamni kiriting!')
       return
     }
 
-    const price = product.final_price + (isForma && backPrint ? 50000 : 0)
+    const price = product.final_price + (canCustomize && backPrint ? customizationPrice : 0)
     trackEvent(goCheckout ? 'buy_now' : 'add_to_cart', {
       product_id: product.id,
       category_id: product.category_id,
@@ -149,8 +152,12 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             {product.review_count > 0 && (
               <div className="product-review-row">
                 <div className="stars">
-                  {'\u2605'.repeat(Math.round(product.avg_rating))}
-                  {'\u2606'.repeat(5 - Math.round(product.avg_rating))}
+                  {Array.from({ length: Math.round(product.avg_rating) }).map((_, index) => (
+                    <span key={`full-${index}`}>&#9733;</span>
+                  ))}
+                  {Array.from({ length: Math.max(0, 5 - Math.round(product.avg_rating)) }).map((_, index) => (
+                    <span key={`empty-${index}`}>&#9734;</span>
+                  ))}
                 </div>
                 <span>
                   {product.avg_rating.toFixed(1)} ({product.review_count} ta sharh)
@@ -163,12 +170,18 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <strong className="product-price">
                 {Math.round(product.final_price).toLocaleString()} <span>so'm</span>
               </strong>
-              {isForma && <small>+ ism yozish: 50,000 so'm (ixtiyoriy)</small>}
+              {canCustomize && (
+                <small>
+                  {customizationStatus === 'included_bonus'
+                    ? "Ism va raqam yozish bonus sifatida bepul"
+                    : `+ ism yozish: ${customizationPrice.toLocaleString()} so'm (ixtiyoriy)`}
+                </small>
+              )}
               {availableStocks.length > 0 && (
                 <div className="detail-size-strip">
                   {availableStocks.map((stock) => (
                     <span key={stock.size}>
-                      {stock.size} · {stock.quantity} ta
+                      {stock.size} - {stock.available ?? stock.quantity} ta
                     </span>
                   ))}
                 </div>
@@ -181,9 +194,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <div className="product-option-block">
                 <span className="field-label">O'lchamni tanlang</span>
                 <div className="detail-size-row">
-                  {product.stocks.map((stock) => {
-                    const isOut = stock.quantity === 0
-                    const isLow = stock.quantity > 0 && stock.quantity <= 2
+                  {stocks.map((stock) => {
+                    const available = stock.available ?? stock.quantity
+                    const isOut = available === 0
+                    const isLow = available > 0 && available <= 2
                     const isSel = selectedSize === stock.size
                     return (
                       <button
@@ -195,7 +209,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                       >
                         {stock.size}
                         {isLow && !isOut && <i>!</i>}
-                        {isOut && <em>×</em>}
+                        {isOut && <em>x</em>}
                       </button>
                     )
                   })}
@@ -216,9 +230,13 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
             </div>
 
-            {isForma && (
+            {canCustomize && (
               <div className="product-option-block">
-                <span className="field-label">Forma orqasiga ism yozish (+50,000 so'm)</span>
+                <span className="field-label">
+                  {customizationStatus === 'included_bonus'
+                    ? 'Forma orqasiga ism yozish (bepul)'
+                    : `Forma orqasiga ism yozish (+${customizationPrice.toLocaleString()} so'm)`}
+                </span>
                 <div className="print-choice-row">
                   {[
                     { val: false, label: "Yo'q, kerak emas" },
