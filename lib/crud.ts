@@ -1,6 +1,7 @@
 export type ProductFilter = {
   categoryId?: number
   teamId?: number
+  team?: string
   brandId?: number
   search?: string
   mainCategory?: string
