@@ -1,0 +1,213 @@
+.promo-card-link {
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .34), 0 0 34px rgba(57, 255, 136, .08);
+}
+
+.team-logo-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 14px;
+  scroll-snap-type: x mandatory;
+}
+
+.team-logo-card {
+  min-width: 104px;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+  text-align: center;
+  text-decoration: none;
+  scroll-snap-align: start;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.team-logo-card:hover,
+.team-logo-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-green);
+}
+
+.team-logo-card span {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-logo-card img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, .32));
+}
+
+.team-logo-card strong {
+  color: rgba(247, 251, 255, .78);
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.home-category-stack {
+  display: grid;
+  gap: 26px;
+}
+
+.category-product-section {
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(57,255,136,.06), rgba(255,255,255,.025));
+}
+
+.category-product-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.category-product-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.category-product-head p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.category-product-head a,
+.catalog-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(57,255,136,.42);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(57,255,136,.08);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.category-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.category-empty {
+  padding: 22px;
+  border: 1px dashed rgba(255,255,255,.14);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.catalog-hero .container {
+  position: relative;
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.catalog-hero .container::after {
+  content: '';
+  position: absolute;
+  right: 24px;
+  bottom: -28px;
+  width: min(38vw, 330px);
+  aspect-ratio: 320 / 573;
+  background: url('/images/premium-jersey-promo.svg') center bottom / contain no-repeat;
+  opacity: .78;
+  filter: drop-shadow(0 24px 40px rgba(57,255,136,.12));
+  pointer-events: none;
+}
+
+.product-breadcrumb-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1040px) {
+  .category-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .category-product-section {
+    padding: 14px;
+  }
+
+  .category-product-head {
+    align-items: flex-start;
+  }
+
+  .category-product-head h3 {
+    font-size: 28px;
+  }
+
+  .catalog-hero .container::after {
+    width: 190px;
+    opacity: .42;
+  }
+}
+
+@media (max-width: 460px) {
+  .store-product-grid,
+  .catalog-grid,
+  .category-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  .shop-product-body {
+    padding: 10px !important;
+  }
+
+  .shop-product-image img {
+    padding: 12px !important;
+  }
+
+  .shop-product-body h3 {
+    min-height: 42px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+
+  .shop-product-category,
+  .shop-rating,
+  .card-size-row {
+    font-size: 10px !important;
+  }
+
+  .shop-product-footer strong {
+    font-size: 14px !important;
+  }
+
+  .shop-order-btn {
+    min-height: 34px !important;
+    margin-top: 8px !important;
+    font-size: 10px !important;
+  }
+}
