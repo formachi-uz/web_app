@@ -5,7 +5,7 @@ import { notifyAdminError } from '@/lib/notify'
 export const dynamic = 'force-dynamic'
 
 const BOT_TOKEN = process.env.BOT_TOKEN!
-const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID || '-5194049252'
+const GROUP_ORDERS_ID = process.env.GROUP_CHAT_ID || process.env.GROUP_ORDERS_ID || '-5194049252'
 const GLAVNIY_ADMIN = process.env.GLAVNIY_ADMIN_ID || '8156792282'
 
 function orderActionsKeyboard(orderId: number) {
@@ -17,10 +17,31 @@ function orderActionsKeyboard(orderId: number) {
   }
 }
 
-async function sendTelegram(chat_id: string, text: string, orderId: number, photo?: string) {
+function chatCandidates(rawChatId: string) {
+  const candidates: string[] = []
+
+  for (const rawValue of rawChatId.split(/[,\s]+/)) {
+    const value = rawValue.trim()
+    if (!value) continue
+
+    candidates.push(value)
+
+    if (/^\d+$/.test(value)) {
+      candidates.push(`-${value}`)
+      candidates.push(`-100${value}`)
+    }
+
+    if (/^-\d+$/.test(value) && !value.startsWith('-100')) {
+      candidates.push(`-100${value.slice(1)}`)
+    }
+  }
+
+  return [...new Set(candidates)]
+}
+
+async function sendTelegram(chatId: string, text: string, orderId: number, photo?: string) {
   if (!BOT_TOKEN) {
-    console.warn('BOT_TOKEN topilmadi: buyurtma Telegram guruhiga yuborilmadi')
-    return
+    throw new Error('BOT_TOKEN topilmadi')
   }
 
   const base = `https://api.telegram.org/bot${BOT_TOKEN}`
@@ -31,23 +52,46 @@ async function sendTelegram(chat_id: string, text: string, orderId: number, phot
     const res = await fetch(`${base}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, photo, caption, parse_mode: 'HTML', reply_markup }),
+      body: JSON.stringify({ chat_id: chatId, photo, caption, parse_mode: 'HTML', reply_markup }),
     })
-    if (!res.ok) throw new Error(`Telegram sendPhoto error: ${await res.text()}`)
-  } else {
-    const res = await fetch(`${base}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, text, parse_mode: 'HTML', reply_markup }),
-    })
-    if (!res.ok) throw new Error(`Telegram sendMessage error: ${await res.text()}`)
+    if (!res.ok) throw new Error(`${chatId}: Telegram sendPhoto error: ${await res.text()}`)
+    return
   }
+
+  const res = await fetch(`${base}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', reply_markup }),
+  })
+  if (!res.ok) throw new Error(`${chatId}: Telegram sendMessage error: ${await res.text()}`)
+}
+
+async function sendToFirstWorkingChat(chatIds: string[], text: string, orderId: number, photo?: string) {
+  const errors: string[] = []
+
+  for (const chatId of chatIds) {
+    try {
+      await sendTelegram(chatId, text, orderId, photo)
+      return { ok: true, chatId, errors }
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return { ok: false, chatId: null, errors }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { customer_name, customer_phone, address, payment_type, items, total } = body
+    const {
+      customer_name,
+      customer_phone,
+      address,
+      payment_type,
+      items,
+      total,
+    } = body
 
     if (!customer_name || !customer_phone || !address || !payment_type || !items?.length) {
       return NextResponse.json({ error: "Ma'lumotlar to'liq emas" }, { status: 400 })
@@ -68,13 +112,15 @@ export async function POST(req: NextRequest) {
 
     const paymentLabel = payment_type === 'card' ? '💳 Karta / Paynet' : '🤝 Uzum Nasiya'
     const nasiyaNote = payment_type === 'credit' ? '\n⚠️ <b>UZUM NASIYA — aloqaga chiqing!</b>' : ''
+
     let cartLines = ''
     let firstPhoto: string | undefined
 
     for (const item of items) {
-      const extra = [item.size ? `(${item.size})` : '', item.back_print ? `✍️ ${item.back_print}` : '']
-        .filter(Boolean)
-        .join(' | ')
+      const extra = [
+        item.size ? `(${item.size})` : '',
+        item.back_print ? `✍️ ${item.back_print}` : '',
+      ].filter(Boolean).join(' | ')
       cartLines += `• ${item.name}${extra ? ' ' + extra : ''} × ${item.qty} = ${(item.price * item.qty).toLocaleString()} so'm\n`
       if (!firstPhoto && item.photo_url) firstPhoto = item.photo_url
     }
@@ -92,17 +138,38 @@ export async function POST(req: NextRequest) {
       `${'─'.repeat(28)}\n` +
       `💰 <b>JAMI: ${total.toLocaleString()} so'm</b>`
 
-    const targets = [...new Set([GROUP_ORDERS_ID, GLAVNIY_ADMIN])]
-    const telegramResults = await Promise.allSettled(
-      targets.map((id) => sendTelegram(id, adminText, orderId, firstPhoto))
+    const orderChatResult = await sendToFirstWorkingChat(
+      chatCandidates(GROUP_ORDERS_ID),
+      adminText,
+      orderId,
+      firstPhoto
     )
-    const telegramOk = telegramResults.filter((result) => result.status === 'fulfilled').length
-    console.log(`Order #${orderId} saved. Telegram notified: ${telegramOk}/${targets.length}`)
-    telegramResults.forEach((result) => {
-      if (result.status === 'rejected') console.error('Telegram order notify error:', result.reason)
-    })
 
-    return NextResponse.json({ success: true, order_id: orderId, telegram_notified: telegramOk })
+    if (!orderChatResult.ok) {
+      await notifyAdminError('Order group notify failed', new Error(orderChatResult.errors.join('\n')), {
+        GROUP_CHAT_ID: GROUP_ORDERS_ID,
+        order_id: orderId,
+      })
+    }
+
+    let adminNotified = false
+    if (GLAVNIY_ADMIN && GLAVNIY_ADMIN !== orderChatResult.chatId) {
+      try {
+        await sendTelegram(GLAVNIY_ADMIN, adminText, orderId, firstPhoto)
+        adminNotified = true
+      } catch (error) {
+        console.error('Telegram admin notify error:', error)
+        await notifyAdminError('Order admin notify failed', error, { order_id: orderId })
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      order_id: orderId,
+      order_group_notified: orderChatResult.ok,
+      order_group_chat_id: orderChatResult.chatId,
+      admin_notified: adminNotified,
+    })
   } catch (error) {
     console.error('Orders API error:', error)
     await notifyAdminError('Orders API error', error)
