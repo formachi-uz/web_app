@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProducts } from '../../../lib/crud'
+import { getProducts } from '@/lib/crud'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,15 +11,17 @@ export async function GET(request: NextRequest) {
       ? Number(searchParams.get('category'))
       : undefined
 
-    const teamId = searchParams.get('team')
-      ? Number(searchParams.get('team'))
+    const teamId = searchParams.get('teamId')
+      ? Number(searchParams.get('teamId'))
       : undefined
 
-    const brandId = searchParams.get('brand')
-      ? Number(searchParams.get('brand'))
+    const brandId = searchParams.get('brandId')
+      ? Number(searchParams.get('brandId'))
       : undefined
 
-    const search = searchParams.get('search') || undefined
+    const team = searchParams.get('team') || undefined
+    const brand = searchParams.get('brand') || undefined
+    const search = searchParams.get('search') || searchParams.get('q') || undefined
     const mainCategory = searchParams.get('mainCategory') || undefined
     const productType = searchParams.get('productType') || undefined
     const season = searchParams.get('season') || undefined
@@ -25,7 +29,9 @@ export async function GET(request: NextRequest) {
 
     const products = await getProducts({
       categoryId,
+      team,
       teamId,
+      brand,
       brandId,
       search,
       mainCategory,
@@ -37,7 +43,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(products)
   } catch (error) {
     console.error('Products API error:', error)
-
     return NextResponse.json(
       { error: 'Mahsulotlarni yuklashda xatolik yuz berdi' },
       { status: 500 }
