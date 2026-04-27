@@ -1,27 +1,74 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Send, ShieldCheck, Shirt, Truck } from 'lucide-react'
-import { getProducts, getReviews } from '@/lib/db'
+import { getProducts, getReviews, Product } from '@/lib/db'
 import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 60
 
-// Updated teams array with explicit filter parameters and logo paths
 const teams = [
-  { name: 'Real Madrid', logo: '/logos/real-madrid.png', filterParam: 'Real Madrid' },
-  { name: 'Barcelona', logo: '/logos/barcelona.png', filterParam: 'Barcelona' },
-  { name: 'Manchester City', logo: '/logos/man-city.png', filterParam: 'Manchester City' },
-  { name: 'Chelsea', logo: '/logos/chelsea.png', filterParam: 'Chelsea' },
-  { name: 'Liverpool', logo: '/logos/liverpool.png', filterParam: 'Liverpool' },
-  { name: 'Bayern Munich', logo: '/logos/bayern.png', filterParam: 'Bayern Munich' },
-  { name: 'PSG', logo: '/logos/psg.png', filterParam: 'PSG' },
-  { name: 'Milliy Jamoalar', logo: '/logos/uzb.png', filterParam: 'National' },
+  {
+    name: 'Real Madrid',
+    query: 'Real Madrid',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
+  },
+  {
+    name: 'Barcelona',
+    query: 'Barcelona',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
+  },
+  {
+    name: 'Manchester City',
+    query: 'Manchester City',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
+  },
+  {
+    name: 'Chelsea',
+    query: 'Chelsea',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
+  },
+  {
+    name: 'Liverpool',
+    query: 'Liverpool',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
+  },
+  {
+    name: 'Bayern Munich',
+    query: 'Bayern Munich',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/FC_Bayern_Munich_logo_%282017%29.svg',
+  },
+  {
+    name: 'PSG',
+    query: 'PSG',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
+  },
+  {
+    name: 'Argentina',
+    query: 'Argentina',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/c/c1/Argentina_national_football_team_logo.svg',
+  },
+  {
+    name: 'Brazil',
+    query: 'Brazil',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/0/05/Brazilian_Football_Confederation_logo.svg',
+  },
+  {
+    name: 'Uzbekistan',
+    query: 'Uzbekistan',
+    logo: 'https://upload.wikimedia.org/wikipedia/en/7/77/Uzbekistan_Football_Association_logo.svg',
+  },
 ]
 
 export default async function HomePage() {
   const [products, reviews] = await Promise.all([getProducts(), getReviews()])
 
-  const featuredProducts = products.slice(0, 8)
+  const formalar = products.filter(isFormaProduct).slice(0, 8)
+  const retroFormalar = products.filter(isRetroProduct).slice(0, 8)
+  const butsiylar = products.filter(isBootProduct).slice(0, 8)
+  const fallback = products.slice(0, 8)
+
+  const topFormaCount = formalar.length || fallback.length
+  const bootCount = butsiylar.length || fallback.length
 
   let avgRating = '5.0'
   if (reviews.length > 0) {
@@ -31,91 +78,110 @@ export default async function HomePage() {
 
   return (
     <div className="store-home bg-bg text-white min-h-screen">
-      {/* 1. PREMIUM PROMO HERO SECTION */}
       <section className="container mx-auto px-4 py-8 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Top Forma Promo Block */}
-          <Link href="/catalog?category=formalar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
-            <img
-              src="/images/premium-jersey-promo.jpg"
-              alt="Top Formalar"
-              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 p-6 md:p-8">
-              <span className="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider rounded-full mb-3">
-                Yangi kolleksiya
-              </span>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-2">Top Formalar</h2>
-              <p className="text-gray-300 text-sm md:text-base">Sevimli jamoangiz libosini tanlang</p>
-            </div>
-          </Link>
-
-          {/* Premium Butsi Promo Block */}
-          <Link href="/catalog?category=butsiylar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
-            <img
-              src="/images/premium-boot-promo.jpg"
-              alt="Premium Butsiylar"
-              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 p-6 md:p-8">
-              <span className="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider rounded-full mb-3">
-                Professional tanlov
-              </span>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-2">Premium Butsiylar</h2>
-              <p className="text-gray-300 text-sm md:text-base">Maydonda o'z kuchingizni ko'rsating</p>
-            </div>
-          </Link>
+          <PromoCard
+            href="/catalog?mainCategory=FORMLAR"
+            image="/images/premium-jersey-promo.svg"
+            eyebrow="Yangi kolleksiya"
+            title="Top Formalar"
+            text={`${topFormaCount} ta premium forma va ism yozish xizmati`}
+          />
+          <PromoCard
+            href="/catalog?mainCategory=BUTSIYLAR"
+            image="/images/premium-boot-promo.svg"
+            eyebrow="Professional tanlov"
+            title="Premium Butsiylar"
+            text={`${bootCount} ta tezlik va nazorat uchun tanlov`}
+          />
         </div>
       </section>
 
-      {/* 2. TEAM SELECTOR (Horizontal Scroll with PNG Logos) */}
       <section id="teams" className="container mx-auto px-4 py-8">
         <SectionHead eyebrow="Jamoalar" title="Jamoangizni tanlang" href="/catalog" />
-        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 hide-scrollbar mt-6" aria-label="Jamoalar bo'yicha tezkor filter">
+        <div className="team-logo-scroll mt-6" aria-label="Jamoalar bo'yicha tezkor filter">
           {teams.map((team) => (
-            <Link
-              key={team.name}
-              href={`/catalog?team=${encodeURIComponent(team.filterParam)}`}
-              className="flex-shrink-0 snap-start flex flex-col items-center justify-center bg-surface border border-border rounded-xl p-4 w-[100px] hover:border-accent hover:shadow-[0_0_15px_rgba(0,229,160,0.15)] transition-all group"
-            >
-              <div className="w-14 h-14 mb-3 flex items-center justify-center">
-                <img
-                  src={team.logo}
-                  alt={team.name}
-                  className="max-w-full max-h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform"
-                />
-              </div>
-              <strong className="text-[11px] text-center text-gray-300 uppercase tracking-wide group-hover:text-accent">
-                {team.name}
-              </strong>
+            <Link key={team.name} href={`/catalog?team=${encodeURIComponent(team.query)}`} className="team-logo-card">
+              <span>
+                <img src={team.logo} alt={team.name} />
+              </span>
+              <strong>{team.name}</strong>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* 3. CATALOG GRID (Compact 2-column mobile layout inherited via ProductCard) */}
-      {featuredProducts.length > 0 && (
-        <section id="catalog" className="container mx-auto px-4 py-8">
-          <SectionHead eyebrow="Katalog" title="Ommabop mahsulotlar" href="/catalog" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 mt-6">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-      )}
+      <section id="catalog" className="container mx-auto px-4 py-8">
+        <SectionHead eyebrow="Katalog" title="3 asosiy bo'lim" href="/catalog" />
+        <div className="home-category-stack mt-6">
+          <CategoryProductSection
+            title="Formlar"
+            text="Klub va milliy jamoalar. Ism va raqam yozish xizmati mavjud."
+            href="/catalog?mainCategory=FORMLAR"
+            products={formalar.length ? formalar : fallback}
+          />
+          <CategoryProductSection
+            title="Retro formalar"
+            text="Klassik, vintage va trenddagi eski mavsum formalari."
+            href="/catalog?mainCategory=RETRO_FORMALAR"
+            products={retroFormalar}
+          />
+          <CategoryProductSection
+            title="Butsiylar"
+            text="Nike, Adidas, Puma va boshqa premium futbol butsiylari."
+            href="/catalog?mainCategory=BUTSIYLAR"
+            products={butsiylar}
+          />
+        </div>
+      </section>
 
-      {/* 4. TRUST BADGES */}
       <section className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <TrustItem icon={<Truck size={24} />} title="1-2 kun yetkazish" />
           <TrustItem icon={<ShieldCheck size={24} />} title="Sifatli material" />
           <TrustItem icon={<Shirt size={24} />} title="Ism yozish xizmati" />
-          <TrustItem icon={<Send size={24} />} title="Telegram buyurtma" />
+          <TrustItem icon={<Send size={24} />} title={`Telegram buyurtma | ${avgRating}`} />
         </div>
       </section>
+    </div>
+  )
+}
+
+function PromoCard({ href, image, eyebrow, title, text }: { href: string; image: string; eyebrow: string; title: string; text: string }) {
+  return (
+    <Link href={href} className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300 promo-card-link">
+      <img src={image} alt={title} className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+      <div className="absolute bottom-0 left-0 p-6 md:p-8">
+        <span className="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+          {eyebrow}
+        </span>
+        <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-2">{title}</h2>
+        <p className="text-gray-300 text-sm md:text-base">{text}</p>
+      </div>
+    </Link>
+  )
+}
+
+function CategoryProductSection({ title, text, href, products }: { title: string; text: string; href: string; products: Product[] }) {
+  return (
+    <div className="category-product-section">
+      <div className="category-product-head">
+        <div>
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </div>
+        <Link href={href}>Ko'rish</Link>
+      </div>
+      {products.length > 0 ? (
+        <div className="category-product-grid">
+          {products.slice(0, 4).map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="category-empty">Bu bo'limga mahsulot qo'shilganda shu yerda ko'rinadi.</div>
+      )}
     </div>
   )
 }
@@ -141,4 +207,22 @@ function SectionHead({ eyebrow, title, href }: { eyebrow: string; title: string;
       </Link>
     </div>
   )
+}
+
+function textOf(product: Product, keys: string[]) {
+  const source = product as unknown as Record<string, unknown>
+  return keys.map((key) => String(source[key] ?? '')).join(' ').toLowerCase()
+}
+
+function isRetroProduct(product: Product) {
+  return textOf(product, ['main_category', 'product_type', 'category_name', 'name']).includes('retro')
+}
+
+function isBootProduct(product: Product) {
+  const text = textOf(product, ['main_category', 'product_type', 'category_name', 'brand', 'model', 'name'])
+  return text.includes('butsi') || text.includes('boot') || text.includes('puma') || text.includes('nike') || text.includes('adidas')
+}
+
+function isFormaProduct(product: Product) {
+  return !isBootProduct(product) && !isRetroProduct(product)
 }
