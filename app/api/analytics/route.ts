@@ -15,6 +15,7 @@ const allowedEvents = new Set([
   'checkout_error',
   'begin_checkout',
   'abandoned_cart_signal',
+  'product_search',
 ])
 
 export async function POST(req: NextRequest) {
