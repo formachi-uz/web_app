@@ -37,6 +37,12 @@ export interface Product {
   review_count: number
   category_name?: string
   category_emoji?: string
+  
+  // --- YANGI QO'SHILGAN MAYDONLAR ---
+  team?: string | null
+  season?: string | null
+  kit_type?: string | null
+  is_customizable?: boolean
 }
 
 export interface CartItem {
@@ -79,16 +85,37 @@ export async function getCategories(): Promise<Category[]> {
   return rows
 }
 
-export async function getProducts(categoryId?: number): Promise<Product[]> {
-  const where = categoryId
-    ? `AND p.category_id = $1 AND p.category_id != 4`
-    : `AND p.category_id != 4`
-  const params = categoryId ? [categoryId] : []
+// Parametrlar kengaytirildi va DB filtrlash qismi qo'shildi
+export async function getProducts(categoryId?: number, query?: string, team?: string): Promise<Product[]> {
+  let where = `AND p.category_id != 4`
+  const params: any[] = []
+  let paramIndex = 1
 
+  if (categoryId) {
+    where += ` AND p.category_id = $${paramIndex}`
+    params.push(categoryId)
+    paramIndex++
+  }
+
+  if (query) {
+    where += ` AND p.name ILIKE $${paramIndex}`
+    params.push(`%${query}%`)
+    paramIndex++
+  }
+
+  if (team) {
+    where += ` AND p.team ILIKE $${paramIndex}`
+    params.push(`%${team}%`)
+    paramIndex++
+  }
+
+  // O'zingiz qutqarib qolishingiz uchun DB'da hali bu kolonka bo'lmasa qulab tushmasligi uchun try-catch qilingan holda tanlash kerak
+  // Ammo PostgreSQLda ustun yo'q bo'lsa darhol xato beradi. Backend admin panelda model migratsiya qilingan deb hisoblaymiz.
   const { rows } = await pool.query(
     `SELECT
       p.id, p.category_id, p.name, p.description,
       p.price, p.discount_percent, p.photo_url, p.in_stock,
+      p.team, p.season, p.kit_type, p.is_customizable,
       CASE WHEN p.discount_percent > 0
         THEN p.price * (1 - p.discount_percent / 100)
         ELSE p.price END AS final_price,
@@ -129,6 +156,7 @@ export async function getProductById(id: number): Promise<Product | null> {
     `SELECT
       p.id, p.category_id, p.name, p.description,
       p.price, p.discount_percent, p.photo_url, p.in_stock,
+      p.team, p.season, p.kit_type, p.is_customizable,
       CASE WHEN p.discount_percent > 0
         THEN p.price * (1 - p.discount_percent / 100)
         ELSE p.price END AS final_price,
