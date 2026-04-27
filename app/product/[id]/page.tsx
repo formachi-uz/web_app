@@ -1,4 +1,4 @@
-import { getProductById, getProducts, getReviews } from '@/lib/db'
+import pool, { getProductById, getProducts, getReviews } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import ProductDetailClient from './ProductDetailClient'
 import ProductCard from '@/components/ProductCard'
@@ -16,23 +16,24 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id)
-  const [product, reviews, related] = await Promise.all([
+  const [product, reviews, related, productMeta] = await Promise.all([
     getProductById(id),
     getReviews(id),
     getProducts(),
+    getProductMeta(id),
   ])
 
   if (!product) notFound()
 
+  const hydratedProduct = { ...product, ...productMeta }
   const relatedProducts = related
     .filter((p) => p.id !== id && p.category_id === product.category_id)
     .slice(0, 4)
 
   return (
     <div>
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={hydratedProduct as typeof product} />
 
-      {/* ─── Reviews ───────────────────────────────────────────────────────── */}
       {reviews.length > 0 && (
         <section style={{
           background: 'var(--surface)',
@@ -95,7 +96,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
         </section>
       )}
 
-      {/* ─── Related products ──────────────────────────────────────────────── */}
       {relatedProducts.length > 0 && (
         <section style={{ padding: '60px 0' }}>
           <div className="container">
@@ -118,4 +118,19 @@ export default async function ProductPage({ params }: { params: { id: string } }
       )}
     </div>
   )
+}
+
+async function getProductMeta(id: number) {
+  if (!Number.isFinite(id) || !process.env.DATABASE_URL) return {}
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT gallery, main_category, product_type FROM products WHERE id = $1 LIMIT 1',
+      [id]
+    )
+    return rows[0] ?? {}
+  } catch (error) {
+    console.error('getProductMeta failed:', error)
+    return {}
+  }
 }
