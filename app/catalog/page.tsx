@@ -1,6 +1,7 @@
 import { getCategories, getProducts } from '@/lib/db'
 import CatalogSearch from '@/components/CatalogSearch'
 import Link from 'next/link'
+import { Home } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -42,13 +43,20 @@ export default async function CatalogPage({
   ])
 
   const activeCategory = categories.find((c) => c.id === categoryId)
+  const mainCategoryLabels: Record<string, string> = {
+    FORMLAR: 'Formlar',
+    RETRO_FORMALAR: 'Retro formalar',
+    BUTSIYLAR: 'Butsiylar',
+  }
   const titleLabel = activeCategory
     ? `${activeCategory.emoji} ${activeCategory.name}`
-    : team
-      ? `Jamoa: ${team}`
-      : brand
-        ? `Brend: ${brand}`
-        : 'Barcha mahsulotlar'
+    : mainCategory
+      ? mainCategoryLabels[mainCategory] ?? mainCategory
+      : team
+        ? `Jamoa: ${team}`
+        : brand
+          ? `Brend: ${brand}`
+          : 'Barcha mahsulotlar'
 
   const preserveQuery = new URLSearchParams()
   if (query) preserveQuery.set('q', query)
@@ -61,7 +69,9 @@ export default async function CatalogPage({
 
   const makeCategoryHref = (id?: number) => {
     const params = new URLSearchParams(preserveQuery)
+    params.delete('mainCategory')
     if (id) params.set('category', String(id))
+    else params.delete('category')
     return params.toString() ? `/catalog?${params.toString()}` : '/catalog'
   }
 
@@ -69,7 +79,10 @@ export default async function CatalogPage({
     <div className="catalog-page">
       <section className="catalog-hero">
         <div className="container">
-          <span className="section-kicker">{titleLabel}</span>
+          <Link href="/" className="catalog-home-link">
+            <Home size={16} /> Asosiy menyuga qaytish
+          </Link>
+          <span className="section-kicker" style={{ marginTop: 16 }}>{titleLabel}</span>
           <h1>Katalog</h1>
           <p>
             {query ? `"${query}" bo'yicha ` : ''}
@@ -79,10 +92,22 @@ export default async function CatalogPage({
       </section>
 
       <section className="container catalog-shell">
-        <div className="catalog-filter-row" aria-label="Katalog kategoriyalari">
-          <Link href={makeCategoryHref()} className={!categoryId ? 'active' : ''}>
+        <div className="catalog-filter-row" aria-label="Asosiy mahsulot bo'limlari">
+          <Link href="/catalog" className={!categoryId && !mainCategory ? 'active' : ''}>
             Barchasi
           </Link>
+          <Link href="/catalog?mainCategory=FORMLAR" className={mainCategory === 'FORMLAR' ? 'active' : ''}>
+            Formlar
+          </Link>
+          <Link href="/catalog?mainCategory=RETRO_FORMALAR" className={mainCategory === 'RETRO_FORMALAR' ? 'active' : ''}>
+            Retro formalar
+          </Link>
+          <Link href="/catalog?mainCategory=BUTSIYLAR" className={mainCategory === 'BUTSIYLAR' ? 'active' : ''}>
+            Butsiylar
+          </Link>
+        </div>
+
+        <div className="catalog-filter-row" aria-label="Katalog kategoriyalari">
           {categories.map((cat) => (
             <Link
               key={cat.id}
