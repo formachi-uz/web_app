@@ -1,5 +1,5 @@
 import { getCategories, getProducts } from '@/lib/db'
-import ProductCard from '@/components/ProductCard'
+import CatalogSearch from '@/components/CatalogSearch'
 import Link from 'next/link'
 
 export const revalidate = 60
@@ -19,7 +19,6 @@ export default async function CatalogPage({
 
   return (
     <div>
-      {/* Header */}
       <div style={{
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
@@ -42,9 +41,8 @@ export default async function CatalogPage({
       </div>
 
       <div className="container" style={{ padding: '40px 24px' }}>
-        {/* Category filters */}
         <div style={{
-          display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 40,
+          display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24,
         }}>
           <Link
             href="/catalog"
@@ -79,31 +77,7 @@ export default async function CatalogPage({
           ))}
         </div>
 
-        {/* Products grid */}
-        {products.length === 0 ? (
-          <div style={{
-            textAlign: 'center', padding: '80px 0',
-            color: 'var(--muted)',
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, marginBottom: 8 }}>
-              MAHSULOTLAR YO'Q
-            </div>
-            <div style={{ fontSize: 13 }}>
-              Bu kategoriyada hozircha mahsulot mavjud emas
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: 20,
-          }}>
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+        <CatalogSearch products={products} />
       </div>
     </div>
   )
