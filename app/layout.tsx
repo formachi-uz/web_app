@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './formachi-fixes.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
