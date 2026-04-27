@@ -1,112 +1,55 @@
-'use client'
 import Link from 'next/link'
+import { Instagram, Mail, Phone, Send } from 'lucide-react'
 
 export default function Footer() {
   return (
-    <footer style={{
-      background: 'var(--surface)',
-      borderTop: '1px solid var(--border)',
-      marginTop: 80,
-    }}>
-      <div className="container" style={{ padding: '48px 24px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 40,
-          marginBottom: 40,
-        }}>
-          {/* Brand */}
-          <div>
-            <div style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 28, letterSpacing: 3,
-              color: 'var(--accent)', marginBottom: 12,
-            }}>⚽ FORMACHI</div>
-            <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>
-              Sport kiyimlari do'koni.<br />
-              Formalar, butsalar, retro kiyimlar.
-            </p>
-          </div>
-
-          {/* Links */}
-          <div>
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10,
-              letterSpacing: 3, color: 'var(--muted)',
-              textTransform: 'uppercase', marginBottom: 16,
-            }}>Sahifalar</div>
-            {[
-              { href: '/', label: 'Bosh sahifa' },
-              { href: '/catalog', label: 'Katalog' },
-              { href: '/cart', label: 'Savat' },
-              { href: '/orders', label: 'Buyurtmalarim' },
-            ].map((item) => (
-              <div key={item.href} style={{ marginBottom: 8 }}>
-                <Link href={item.href} style={{
-                  color: 'var(--muted)', textDecoration: 'none',
-                  fontSize: 13, transition: 'color 0.15s',
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
-                >{item.label}</Link>
-              </div>
-            ))}
-          </div>
-
-          {/* Contact */}
-          <div>
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10,
-              letterSpacing: 3, color: 'var(--muted)',
-              textTransform: 'uppercase', marginBottom: 16,
-            }}>Aloqa</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <a href="https://t.me/Formachi_uzBot" target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  color: 'var(--muted)', textDecoration: 'none', fontSize: 13,
-                  transition: 'color 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
-              >
-                📱 Telegram bot
-              </a>
-              <a href="https://t.me/formachi_admin" target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  color: 'var(--muted)', textDecoration: 'none', fontSize: 13,
-                  transition: 'color 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
-              >
-                💬 Admin bilan bog'lanish
-              </a>
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                📍 Toshkent, Uchtepa outlet center B157
-              </div>
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                ⏱️ 11:00 — 22:00
-              </div>
-            </div>
+    <footer id="contact" className="site-footer">
+      <div className="container footer-inner">
+        <div className="footer-brand">
+          <Link href="/" className="footer-logo">
+            FORMACHI
+          </Link>
+          <p>Futbol formalari, butsiylar va sport kiyimlari uchun premium online do'kon.</p>
+          <div className="footer-socials">
+            <a href="https://instagram.com/formachi.uz" target="_blank" rel="noopener noreferrer">
+              <Instagram size={18} />
+              formachi.uz
+            </a>
+            <a href="https://t.me/formachi_uz" target="_blank" rel="noopener noreferrer">
+              <Send size={18} />
+              formachi_uz
+            </a>
           </div>
         </div>
 
-        {/* Bottom */}
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          paddingTop: 24,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: 12,
-        }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)' }}>
-            © 2024 Formachi.uz — Barcha huquqlar himoyalangan
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)' }}>
-            🚚 BTS pochta orqali yetkazish
-          </div>
+        <div className="footer-links">
+          <span>Sahifalar</span>
+          <Link href="/">Bosh sahifa</Link>
+          <Link href="/catalog">Katalog</Link>
+          <Link href="/#teams">Jamoalar</Link>
+          <Link href="/#boots">Butsiylar</Link>
         </div>
+
+        <div className="footer-contact">
+          <span>Aloqa</span>
+          <a href="mailto:info@formachi.uz">
+            <Mail size={18} />
+            info@formachi.uz
+          </a>
+          <a href="tel:+998901234567">
+            <Phone size={18} />
+            +998 90 123 45 67
+          </a>
+          <a href="https://t.me/Formachi_uzBot" target="_blank" rel="noopener noreferrer">
+            <Send size={18} />
+            Telegram orqali buyurtma
+          </a>
+        </div>
+      </div>
+
+      <div className="container footer-bottom">
+        <span>© 2024 FORMACHI. Barcha huquqlar himoyalangan.</span>
+        <span>Telegram orqali tez buyurtma</span>
       </div>
     </footer>
   )
