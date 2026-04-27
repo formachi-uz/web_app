@@ -6,29 +6,24 @@ import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 60
 
+// Updated teams array with explicit filter parameters and logo paths
 const teams = [
-  { name: 'Real Madrid', badge: 'RM', query: 'Real Madrid' },
-  { name: 'Barcelona', badge: 'FCB', query: 'Barcelona' },
-  { name: 'Manchester City', badge: 'MC', query: 'Manchester City' },
-  { name: 'Chelsea', badge: 'CFC', query: 'Chelsea' },
-  { name: 'Liverpool', badge: 'LFC', query: 'Liverpool' },
-  { name: 'Bayern Munich', badge: 'FCB', query: 'Bayern Munich' },
-  { name: 'PSG', badge: 'PSG', query: 'PSG' },
-  { name: 'Milliy Jamoalar', badge: 'UZ', query: 'Milliy' },
-  { name: 'Butsiylar', badge: 'BT', query: 'butsa' },
+  { name: 'Real Madrid', logo: '/logos/real-madrid.png', filterParam: 'Real Madrid' },
+  { name: 'Barcelona', logo: '/logos/barcelona.png', filterParam: 'Barcelona' },
+  { name: 'Manchester City', logo: '/logos/man-city.png', filterParam: 'Manchester City' },
+  { name: 'Chelsea', logo: '/logos/chelsea.png', filterParam: 'Chelsea' },
+  { name: 'Liverpool', logo: '/logos/liverpool.png', filterParam: 'Liverpool' },
+  { name: 'Bayern Munich', logo: '/logos/bayern.png', filterParam: 'Bayern Munich' },
+  { name: 'PSG', logo: '/logos/psg.png', filterParam: 'PSG' },
+  { name: 'Milliy Jamoalar', logo: '/logos/uzb.png', filterParam: 'National' },
 ]
 
 export default async function HomePage() {
   const [products, reviews] = await Promise.all([getProducts(), getReviews()])
 
   const featuredProducts = products.slice(0, 8)
-  const bootProducts = products.filter(isBootProduct).slice(0, 3)
-  const fallbackBoots = bootProducts.length > 0 ? bootProducts : products.slice(0, 3)
-  const photoProducts = products.filter((product) => product.photo_url)
-  const heroJersey = photoProducts.find((product) => !isBootProduct(product)) || photoProducts[0] || products[0]
-  const heroBoot = photoProducts.find(isBootProduct) || photoProducts.find((product) => product.id !== heroJersey?.id) || heroJersey
-  const previewProduct = photoProducts.find((product) => product.id !== heroBoot?.id) || heroJersey
-
+  const bootProducts = products.filter((p) => p.category_name?.toLowerCase().includes('butsa')).slice(0, 4)
+  
   let avgRating = '5.0'
   if (reviews.length > 0) {
     const sum = reviews.reduce((s, r) => s + r.rating, 0)
@@ -36,63 +31,80 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="store-home">
-      <section className="store-hero container">
-        <div className="store-hero-copy">
-          <span className="store-eyebrow">FORMACHI Premium Football Store</span>
-          <h1>
-            Sevimli jamoangiz <span>formasini tanlang</span>
-          </h1>
-          <p>Futbol formalari, butsiylar va sport kiyimlari - tez yetkazib berish bilan</p>
-          <div className="store-hero-actions">
-            <Link href="/catalog" className="btn btn-primary">
-              Katalogni ko'rish
-            </Link>
-            <a
-              href="https://t.me/Formachi_uzBot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-            >
-              <Send size={18} />
-              Telegram orqali buyurtma
-            </a>
-          </div>
+    <div className="store-home bg-bg text-white min-h-screen">
+      
+      {/* 1. PREMIUM PROMO HERO SECTION */}
+      <section className="container mx-auto px-4 py-8 md:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Top Forma Promo Block */}
+          <Link href="/catalog?category=formalar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
+            <img 
+              src="/images/premium-jersey-promo.jpg" 
+              alt="Top Formalar" 
+              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 p-6 md:p-8">
+              <span className="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+                Yangi kolleksiya
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-2">Top Formalar</h2>
+              <p className="text-gray-300 text-sm md:text-base">Sevimli jamoangiz libosini tanlang</p>
+            </div>
+          </Link>
 
-          <div className="hero-proof-row" aria-label="Do'kon ko'rsatkichlari">
-            <span>{products.length}+ mahsulot</span>
-            <span>{avgRating} reyting</span>
-            <span>1-2 kun yetkazish</span>
-          </div>
-        </div>
+          {/* Premium Butsi Promo Block */}
+          <Link href="/catalog?category=butsiylar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
+            <img 
+              src="/images/premium-boot-promo.jpg" 
+              alt="Premium Butsiylar" 
+              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 p-6 md:p-8">
+              <span className="inline-block px-3 py-1 bg-accent/20 text-accent text-xs font-bold uppercase tracking-wider rounded-full mb-3">
+                Professional tanlov
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-white mb-2">Premium Butsiylar</h2>
+              <p className="text-gray-300 text-sm md:text-base">Maydonda o'z kuchingizni ko'rsating</p>
+            </div>
+          </Link>
 
-        <div className="store-hero-visual" aria-label="Forma va butsa ko'rgazmasi">
-          <HeroProduct product={heroJersey} label="Top forma" variant="jersey" />
-          <HeroProduct product={heroBoot} label="Premium butsa" variant="boot" />
-          <div className="hero-spotlight" />
         </div>
       </section>
 
-      <section id="teams" className="container store-section">
+      {/* 2. TEAM SELECTOR (Horizontal Scroll with PNG Logos) */}
+      <section id="teams" className="container mx-auto px-4 py-8">
         <SectionHead eyebrow="Jamoalar" title="Jamoangizni tanlang" href="/catalog" />
-        <div className="team-scroll" aria-label="Jamoalar bo'yicha tezkor filter">
-          {teams.map((team, index) => (
+        <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 hide-scrollbar mt-6" aria-label="Jamoalar bo'yicha tezkor filter">
+          {teams.map((team) => (
             <Link
               key={team.name}
-              href={`/catalog?q=${encodeURIComponent(team.query)}`}
-              className={index === 0 ? 'team-card active' : 'team-card'}
+              href={`/catalog?team=${encodeURIComponent(team.filterParam)}`}
+              className="flex-shrink-0 snap-start flex flex-col items-center justify-center bg-surface border border-border rounded-xl p-4 w-[100px] hover:border-accent hover:shadow-[0_0_15px_rgba(0,229,160,0.15)] transition-all group"
             >
-              <span className="team-badge">{team.badge}</span>
-              <strong>{team.name}</strong>
+              <div className="w-14 h-14 mb-3 flex items-center justify-center">
+                <img 
+                  src={team.logo} 
+                  alt={team.name} 
+                  className="max-w-full max-h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+              </div>
+              <strong className="text-[11px] text-center text-gray-300 uppercase tracking-wide group-hover:text-accent">
+                {team.name}
+              strong>
             </Link>
           ))}
         </div>
       </section>
 
+      {/* 3. CATALOG GRID (Compact 2-column mobile layout inherited via ProductCard) */}
       {featuredProducts.length > 0 && (
-        <section id="catalog" className="container store-section">
-          <SectionHead eyebrow="Katalog" title="Premium mahsulotlar" href="/catalog" />
-          <div className="store-product-grid">
+        <section id="catalog" className="container mx-auto px-4 py-8">
+          <SectionHead eyebrow="Katalog" title="Ommabop mahsulotlar" href="/catalog" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 mt-6">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -100,169 +112,38 @@ export default async function HomePage() {
         </section>
       )}
 
-      {fallbackBoots.length > 0 && (
-        <section id="boots" className="container store-section">
-          <SectionHead eyebrow="Featured Boots" title="Mashhur butsiylar" href="/catalog?q=butsa" />
-          <div className="boot-grid">
-            {fallbackBoots.map((product) => (
-              <BootCard key={product.id} product={product} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {previewProduct && (
-        <section className="container store-section">
-          <ProductPreview product={previewProduct} thumbs={photoProducts.slice(0, 4)} />
-        </section>
-      )}
-
-      <section className="container trust-grid" aria-label="FORMACHI afzalliklari">
-        <TrustItem icon={<Truck size={30} />} title="1-2 kun ichida yetkazib berish" />
-        <TrustItem icon={<ShieldCheck size={30} />} title="Sifatli material" />
-        <TrustItem icon={<Shirt size={30} />} title="Ism va raqam yozish xizmati" />
-        <TrustItem icon={<Send size={30} />} title="Telegram orqali tez buyurtma" />
+      {/* 4. TRUST BADGES */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <TrustItem icon={<Truck size={24} />} title="1-2 kun yetkazish" />
+          <TrustItem icon={<ShieldCheck size={24} />} title="Sifatli material" />
+          <TrustItem icon={<Shirt size={24} />} title="Ism yozish xizmati" />
+          <TrustItem icon={<Send size={24} />} title="Telegram buyurtma" />
+        </div>
       </section>
-    </div>
-  )
-}
-
-function HeroProduct({
-  product,
-  label,
-  variant,
-}: {
-  product?: Product
-  label: string
-  variant: 'jersey' | 'boot'
-}) {
-  return (
-    <div className={`hero-product-card hero-product-${variant}`}>
-      <span>{label}</span>
-      {product?.photo_url ? (
-        <img src={`/api/photo?file_id=${product.photo_url}`} alt={product.name} />
-      ) : (
-        <div className="hero-product-placeholder">FORMACHI</div>
-      )}
-      {product && <strong>{product.name}</strong>}
-    </div>
-  )
-}
-
-function BootCard({ product }: { product: Product }) {
-  return (
-    <Link href={`/product/${product.id}`} className="boot-card">
-      <div className="boot-card-image">
-        {product.photo_url ? (
-          <img src={`/api/photo?file_id=${product.photo_url}`} alt={product.name} />
-        ) : (
-          <span>FORMACHI</span>
-        )}
-      </div>
-      <div className="boot-card-body">
-        <div>
-          <strong>{product.name}</strong>
-          <span>{Math.round(product.final_price).toLocaleString()} so'm</span>
-        </div>
-        <small>Buyurtma</small>
-      </div>
-    </Link>
-  )
-}
-
-function ProductPreview({ product, thumbs }: { product: Product; thumbs: Product[] }) {
-  const sizes = product.stocks.filter((stock) => stock.quantity > 0).map((stock) => stock.size)
-  const previewSizes = sizes.length > 0 ? sizes.slice(0, 5) : ['S', 'M', 'L', 'XL', '2XL']
-
-  return (
-    <div className="product-preview-card">
-      <div className="preview-gallery">
-        <div className="preview-thumbs">
-          {(thumbs.length > 0 ? thumbs : [product]).slice(0, 4).map((thumb, index) => (
-            <Link
-              href={`/product/${thumb.id}`}
-              key={`${thumb.id}-${index}`}
-              className={thumb.id === product.id ? 'preview-thumb active' : 'preview-thumb'}
-            >
-              {thumb.photo_url ? <img src={`/api/photo?file_id=${thumb.photo_url}`} alt={thumb.name} /> : <span>FM</span>}
-            </Link>
-          ))}
-        </div>
-        <Link href={`/product/${product.id}`} className="preview-main-image">
-          {product.photo_url ? <img src={`/api/photo?file_id=${product.photo_url}`} alt={product.name} /> : <span>FORMACHI</span>}
-          <i>
-            <ZoomIn size={18} />
-          </i>
-        </Link>
-      </div>
-
-      <div className="preview-panel">
-        <span className="section-kicker">{product.category_name || 'FORMACHI'}</span>
-        <h2>{product.name}</h2>
-        <strong className="preview-price">{Math.round(product.final_price).toLocaleString()} so'm</strong>
-
-        <div className="preview-control">
-          <small>Size</small>
-          <div className="preview-size-row">
-            {previewSizes.map((size, index) => (
-              <span key={size} className={index === 0 ? 'active' : ''}>
-                {size}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="preview-control">
-          <small>Miqdor</small>
-          <div className="quantity-preview">
-            <button aria-label="Kamaytirish">
-              <Minus size={14} />
-            </button>
-            <span>1</span>
-            <button aria-label="Ko'paytirish">
-              <Plus size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="preview-actions">
-          <Link href={`/product/${product.id}`} className="btn btn-primary">
-            Savatga qo'shish
-          </Link>
-          <a href="https://t.me/Formachi_uzBot" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
-            <Send size={17} />
-            Telegram orqali buyurtma
-          </a>
-        </div>
-      </div>
     </div>
   )
 }
 
 function TrustItem({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="trust-item">
-      <span>{icon}</span>
-      <strong>{title}</strong>
+    <div className="flex flex-col items-center justify-center text-center p-4 rounded-xl bg-surface border border-border">
+      <span className="text-accent mb-2">{icon}</span>
+      <strong className="text-xs md:text-sm text-gray-300">{title}</strong>
     </div>
   )
 }
 
 function SectionHead({ eyebrow, title, href }: { eyebrow: string; title: string; href: string }) {
   return (
-    <div className="store-section-head">
+    <div className="flex justify-between items-end border-b border-border pb-4">
       <div>
-        <span>{eyebrow}</span>
-        <h2>{title}</h2>
+        <span className="text-accent text-sm font-semibold tracking-wider uppercase">{eyebrow}</span>
+        <h2 className="text-2xl md:text-3xl font-display font-bold mt-1">{title}</h2>
       </div>
-      <Link href={href}>Barchasini ko'rish</Link>
+      <Link href={href} className="text-sm text-gray-400 hover:text-accent transition-colors hidden md:block">
+        Barchasini ko'rish &rarr;
+      </Link>
     </div>
-  )
-}
-
-function isBootProduct(product: Product) {
-  const value = `${product.name} ${product.category_name || ''}`.toLowerCase()
-  return ['butsa', 'buts', 'boot', 'mercurial', 'predator', 'phantom', 'speedportal'].some((word) =>
-    value.includes(word)
   )
 }
