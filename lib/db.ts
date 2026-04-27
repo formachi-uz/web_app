@@ -3,11 +3,15 @@ import { Pool } from 'pg'
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 })
 
 export default pool
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface Category {
   id: number
   name: string
@@ -19,30 +23,38 @@ export interface Category {
 export interface ProductStock {
   size: string
   quantity: number
+  reserved: number
+  available: number
   sort_order: number
 }
 
 export interface Product {
   id: number
   category_id: number
+  category_name: string
+  category_emoji: string
   name: string
   description: string | null
   price: number
   discount_percent: number
+  final_price: number
   photo_url: string | null
   in_stock: boolean
-  final_price: number
+  team: string | null
+  season: string | null
+  kit_type: string | null
+  league: string | null
+  brand: string | null
+  model: string | null
+  customization_status: 'available_paid' | 'included_bonus' | 'not_available'
+  customization_price: number
+  is_customizable: boolean
+  is_featured: boolean
+  is_top_forma: boolean
+  is_premium_boot: boolean
   stocks: ProductStock[]
   avg_rating: number
   review_count: number
-  category_name?: string
-  category_emoji?: string
-  
-  // --- YANGI QO'SHILGAN MAYDONLAR ---
-  team?: string | null
-  season?: string | null
-  kit_type?: string | null
-  is_customizable?: boolean
 }
 
 export interface CartItem {
@@ -55,16 +67,6 @@ export interface CartItem {
   photo_url: string | null
 }
 
-export interface Order {
-  id: number
-  status: string
-  payment_type: string
-  delivery_address: string
-  comment: string | null
-  total_price: number
-  created_at: string
-}
-
 export interface Review {
   id: number
   rating: number
@@ -74,7 +76,76 @@ export interface Review {
   product_name?: string
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const PRODUCT_SELECT = `
+  SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.description,
+    p.price,
+    p.discount_percent,
+    p.photo_url,
+    p.in_stock,
+    p.team,
+    p.season,
+    p.kit_type,
+    p.league,
+    p.brand,
+    p.model,
+    COALESCE(p.customization_status, 'not_available')  AS customization_status,
+    COALESCE(p.customization_price, 50000)              AS customization_price,
+    COALESCE(p.is_customizable, false)                  AS is_customizable,
+    COALESCE(p.is_featured, false)                      AS is_featured,
+    COALESCE(p.is_top_forma, false)                     AS is_top_forma,
+    COALESCE(p.is_premium_boot, false)                  AS is_premium_boot,
+    CASE
+      WHEN p.discount_percent > 0
+      THEN ROUND((p.price * (1 - p.discount_percent / 100))::numeric, 0)
+      ELSE p.price
+    END AS final_price,
+    c.name  AS category_name,
+    c.emoji AS category_emoji,
+    COALESCE(AVG(r.rating), 0)::float AS avg_rating,
+    COUNT(r.id)::int                  AS review_count
+  FROM products p
+  JOIN categories c ON c.id = p.category_id
+  LEFT JOIN reviews r ON r.product_id = p.id AND r.is_visible = true
+  WHERE p.is_active = true
+`
+
+function attachStocks(products: any[], stocks: any[]): Product[] {
+  return products.map((p) => ({
+    ...p,
+    avg_rating: parseFloat(p.avg_rating),
+    review_count: parseInt(p.review_count),
+    stocks: stocks
+      .filter((s) => s.product_id === p.id)
+      .map((s) => ({
+        size: s.size,
+        quantity: s.quantity,
+        reserved: s.reserved ?? 0,
+        available: Math.max(0, s.quantity - (s.reserved ?? 0)),
+        sort_order: s.sort_order,
+      })),
+  }))
+}
+
+async function loadStocks(productIds: number[]) {
+  if (productIds.length === 0) return []
+  const { rows } = await pool.query(
+    `SELECT product_id, size, quantity, reserved, sort_order
+     FROM product_stocks
+     WHERE product_id = ANY($1)
+     ORDER BY sort_order`,
+    [productIds]
+  )
+  return rows
+}
+
 // ─── Queries ──────────────────────────────────────────────────────────────────
+
 export async function getCategories(): Promise<Category[]> {
   const { rows } = await pool.query(
     `SELECT id, name, emoji, description, sort_order
@@ -85,105 +156,58 @@ export async function getCategories(): Promise<Category[]> {
   return rows
 }
 
-// Parametrlar kengaytirildi va DB filtrlash qismi qo'shildi
-export async function getProducts(categoryId?: number, query?: string, team?: string): Promise<Product[]> {
-  let where = `AND p.category_id != 4`
+export interface ProductFilter {
+  categoryId?: number
+  query?: string
+  team?: string
+  brand?: string
+  league?: string
+  season?: string
+  kitType?: string
+  featured?: boolean
+  topForma?: boolean
+  premiumBoot?: boolean
+}
+
+export async function getProducts(filter: ProductFilter = {}): Promise<Product[]> {
+  const conditions: string[] = ['p.category_id != 4']
   const params: any[] = []
-  let paramIndex = 1
+  let i = 1
 
-  if (categoryId) {
-    where += ` AND p.category_id = $${paramIndex}`
-    params.push(categoryId)
-    paramIndex++
+  const add = (cond: string, val: any) => {
+    conditions.push(cond.replace('?', `$${i++}`))
+    params.push(val)
   }
 
-  if (query) {
-    where += ` AND p.name ILIKE $${paramIndex}`
-    params.push(`%${query}%`)
-    paramIndex++
-  }
+  if (filter.categoryId) add('p.category_id = ?', filter.categoryId)
+  if (filter.query)      add('p.name ILIKE ?',    `%${filter.query}%`)
+  if (filter.team)       add('p.team ILIKE ?',    `%${filter.team}%`)
+  if (filter.brand)      add('p.brand ILIKE ?',   `%${filter.brand}%`)
+  if (filter.league)     add('p.league ILIKE ?',  `%${filter.league}%`)
+  if (filter.season)     add('p.season ILIKE ?',  `%${filter.season}%`)
+  if (filter.kitType)    add('p.kit_type ILIKE ?', `%${filter.kitType}%`)
+  if (filter.featured)   conditions.push('p.is_featured = true')
+  if (filter.topForma)   conditions.push('p.is_top_forma = true')
+  if (filter.premiumBoot) conditions.push('p.is_premium_boot = true')
 
-  if (team) {
-    where += ` AND p.team ILIKE $${paramIndex}`
-    params.push(`%${team}%`)
-    paramIndex++
-  }
-
-  // O'zingiz qutqarib qolishingiz uchun DB'da hali bu kolonka bo'lmasa qulab tushmasligi uchun try-catch qilingan holda tanlash kerak
-  // Ammo PostgreSQLda ustun yo'q bo'lsa darhol xato beradi. Backend admin panelda model migratsiya qilingan deb hisoblaymiz.
+  const where = conditions.map((c) => `AND ${c}`).join('\n  ')
   const { rows } = await pool.query(
-    `SELECT
-      p.id, p.category_id, p.name, p.description,
-      p.price, p.discount_percent, p.photo_url, p.in_stock,
-      p.team, p.season, p.kit_type, p.is_customizable,
-      CASE WHEN p.discount_percent > 0
-        THEN p.price * (1 - p.discount_percent / 100)
-        ELSE p.price END AS final_price,
-      c.name AS category_name, c.emoji AS category_emoji,
-      COALESCE(AVG(r.rating), 0) AS avg_rating,
-      COUNT(r.id) AS review_count
-    FROM products p
-    JOIN categories c ON c.id = p.category_id
-    LEFT JOIN reviews r ON r.product_id = p.id AND r.is_visible = true
-    WHERE p.is_active = true ${where}
-    GROUP BY p.id, c.name, c.emoji
-    ORDER BY p.id DESC`,
+    `${PRODUCT_SELECT} ${where} GROUP BY p.id, c.name, c.emoji ORDER BY p.id DESC`,
     params
   )
 
-  // Stocklarni yuklash
-  const productIds = rows.map((r: any) => r.id)
-  if (productIds.length === 0) return []
-
-  const { rows: stocks } = await pool.query(
-    `SELECT product_id, size, quantity, sort_order
-     FROM product_stocks
-     WHERE product_id = ANY($1)
-     ORDER BY sort_order`,
-    [productIds]
-  )
-
-  return rows.map((p: any) => ({
-    ...p,
-    avg_rating: parseFloat(p.avg_rating),
-    review_count: parseInt(p.review_count),
-    stocks: stocks.filter((s: any) => s.product_id === p.id),
-  }))
+  const stocks = await loadStocks(rows.map((r: any) => r.id))
+  return attachStocks(rows, stocks)
 }
 
 export async function getProductById(id: number): Promise<Product | null> {
   const { rows } = await pool.query(
-    `SELECT
-      p.id, p.category_id, p.name, p.description,
-      p.price, p.discount_percent, p.photo_url, p.in_stock,
-      p.team, p.season, p.kit_type, p.is_customizable,
-      CASE WHEN p.discount_percent > 0
-        THEN p.price * (1 - p.discount_percent / 100)
-        ELSE p.price END AS final_price,
-      c.name AS category_name, c.emoji AS category_emoji,
-      COALESCE(AVG(r.rating), 0) AS avg_rating,
-      COUNT(r.id) AS review_count
-    FROM products p
-    JOIN categories c ON c.id = p.category_id
-    LEFT JOIN reviews r ON r.product_id = p.id AND r.is_visible = true
-    WHERE p.id = $1 AND p.is_active = true
-    GROUP BY p.id, c.name, c.emoji`,
+    `${PRODUCT_SELECT} AND p.id = $1 GROUP BY p.id, c.name, c.emoji`,
     [id]
   )
   if (!rows[0]) return null
-
-  const { rows: stocks } = await pool.query(
-    `SELECT size, quantity, sort_order FROM product_stocks
-     WHERE product_id = $1 ORDER BY sort_order`,
-    [id]
-  )
-
-  return {
-    ...rows[0],
-    avg_rating: parseFloat(rows[0].avg_rating),
-    review_count: parseInt(rows[0].review_count),
-    stocks,
-  }
+  const stocks = await loadStocks([id])
+  return attachStocks(rows, stocks)[0]
 }
 
 export async function getReviews(productId?: number): Promise<Review[]> {
@@ -191,9 +215,10 @@ export async function getReviews(productId?: number): Promise<Review[]> {
   const params = productId ? [productId] : []
   const { rows } = await pool.query(
     `SELECT r.id, r.rating, r.text, r.created_at,
-            u.full_name AS user_name, p.name AS product_name
+            u.full_name AS user_name,
+            p.name      AS product_name
      FROM reviews r
-     JOIN users u ON u.id = r.user_id
+     JOIN users u        ON u.id = r.user_id
      LEFT JOIN products p ON p.id = r.product_id
      WHERE r.is_visible = true ${where}
      ORDER BY r.created_at DESC
@@ -203,8 +228,9 @@ export async function getReviews(productId?: number): Promise<Review[]> {
   return rows
 }
 
+// ─── Order creation (clean, no reflection) ────────────────────────────────────
+
 export async function createOrder(data: {
-  telegram_id: number
   customer_name: string
   customer_phone: string
   address: string
@@ -216,110 +242,79 @@ export async function createOrder(data: {
   try {
     await client.query('BEGIN')
 
-    const userTelegramId =
-      data.telegram_id || -Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 1000)
-    const { rows: userColumnRows } = await client.query(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'`
+    // User: telefon raqami bilan topish yoki yaratish
+    const phone = data.customer_phone.replace(/\s+/g, '').trim()
+    let userId: number
+
+    // Saytdan kelgan buyurtmalar uchun telefon raqamini ID sifatida ishlatamiz
+    const fakeId = -(Math.abs(hashCode(phone)) % 1_000_000_000 + 1_000_000_000)
+
+    const existingUser = await client.query(
+      `SELECT id FROM users WHERE telegram_id = $1`,
+      [fakeId]
     )
-    const userColumns = new Set(userColumnRows.map((row: { column_name: string }) => row.column_name))
-    const userInsertColumns = ['telegram_id', 'full_name']
-    const userInsertValues: Array<string | number> = [userTelegramId, data.customer_name]
 
-    if (userColumns.has('phone')) {
-      userInsertColumns.push('phone')
-      userInsertValues.push(data.customer_phone)
-    } else if (userColumns.has('phone_number')) {
-      userInsertColumns.push('phone_number')
-      userInsertValues.push(data.customer_phone)
+    if (existingUser.rows[0]) {
+      userId = existingUser.rows[0].id
+      // Ism yangilash
+      await client.query(
+        `UPDATE users SET full_name = $1 WHERE id = $2`,
+        [data.customer_name, userId]
+      )
+    } else {
+      const userRes = await client.query(
+        `INSERT INTO users (telegram_id, full_name, phone)
+         VALUES ($1, $2, $3)
+         RETURNING id`,
+        [fakeId, data.customer_name, phone]
+      )
+      userId = userRes.rows[0].id
     }
-
-    const placeholders = userInsertValues.map((_, index) => `$${index + 1}`).join(', ')
-
-    // User yaratish. Saytdan kelgan har buyurtma uchun alohida vaqtinchalik telegram_id ishlatiladi.
-    const userRes = await client.query(
-      `INSERT INTO users (${userInsertColumns.join(', ')})
-       VALUES (${placeholders})
-       RETURNING id`,
-      userInsertValues
-    )
-    const userId = userRes.rows[0].id
-
-    const { rows: orderColumnRows } = await client.query(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'`
-    )
-    const orderColumns = new Set(orderColumnRows.map((row: { column_name: string }) => row.column_name))
-    const statusValue = await getEnumCompatibleValue(client, 'orders', 'status', 'pending')
-    const paymentValue = await getEnumCompatibleValue(client, 'orders', 'payment_type', data.payment_type)
-    const orderInsertColumns: string[] = []
-    const orderInsertValues: Array<string | number | null> = []
-
-    const addOrderValue = (column: string, value: string | number | null) => {
-      if (orderColumns.has(column)) {
-        orderInsertColumns.push(column)
-        orderInsertValues.push(value)
-      }
-    }
-
-    addOrderValue('user_id', userId)
-    addOrderValue('status', statusValue)
-    addOrderValue('payment_type', paymentValue)
-    addOrderValue('payment_method', data.payment_type)
-    addOrderValue('delivery_address', data.address)
-    addOrderValue('address', data.address)
-    addOrderValue('comment', `Ism: ${data.customer_name} | Tel: ${data.customer_phone}`)
-    addOrderValue('customer_name', data.customer_name)
-    addOrderValue('customer_phone', data.customer_phone)
-    addOrderValue('phone', data.customer_phone)
-    addOrderValue('total_price', data.total)
-    addOrderValue('total', data.total)
-    addOrderValue('total_amount', data.total)
-
-    if (orderInsertColumns.length === 0) {
-      throw new Error('orders jadvali ustunlari topilmadi')
-    }
-
-    const orderPlaceholders = orderInsertValues.map((_, index) => `$${index + 1}`).join(', ')
 
     // Order yaratish
     const orderRes = await client.query(
-      `INSERT INTO orders (${orderInsertColumns.join(', ')})
-       VALUES (${orderPlaceholders})
+      `INSERT INTO orders
+         (user_id, status, payment_type, delivery_address, comment,
+          customer_name, customer_phone, total_price)
+       VALUES ($1, 'pending', $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      orderInsertValues
+      [
+        userId,
+        data.payment_type,
+        data.address,
+        `Saytdan buyurtma | ${data.customer_name} | ${phone}`,
+        data.customer_name,
+        phone,
+        data.total,
+      ]
     )
-    const orderId = orderRes.rows[0].id
-
-    const { rows: itemColumnRows } = await client.query(
-      `SELECT column_name FROM information_schema.columns WHERE table_name = 'order_items'`
-    )
-    const itemColumns = new Set(itemColumnRows.map((row: { column_name: string }) => row.column_name))
+    const orderId: number = orderRes.rows[0].id
 
     // Order items
     for (const item of data.items) {
-      const itemInsertColumns = ['order_id', 'product_id', 'quantity', 'price_at_order', 'size']
-      const itemInsertValues: Array<string | number | null> = [
-        orderId,
-        item.product_id,
-        item.qty,
-        item.price,
-        item.size,
-      ]
-
-      if (itemColumns.has('player_name')) {
-        itemInsertColumns.push('player_name')
-        itemInsertValues.push(item.back_print)
-      } else if (itemColumns.has('back_print')) {
-        itemInsertColumns.push('back_print')
-        itemInsertValues.push(item.back_print)
-      }
-
-      const itemPlaceholders = itemInsertValues.map((_, index) => `$${index + 1}`).join(', ')
-
       await client.query(
-        `INSERT INTO order_items (${itemInsertColumns.join(', ')})
-         VALUES (${itemPlaceholders})`,
-        itemInsertValues
+        `INSERT INTO order_items
+           (order_id, product_id, quantity, price_at_order, size, player_name, back_print)
+         VALUES ($1, $2, $3, $4, $5, $6, $6)`,
+        [
+          orderId,
+          item.product_id,
+          item.qty,
+          item.price,
+          item.size ?? null,
+          item.back_print ?? null,
+        ]
       )
+
+      // Soft-reserve stock
+      if (item.size) {
+        await client.query(
+          `UPDATE product_stocks
+           SET reserved = LEAST(quantity, reserved + $1)
+           WHERE product_id = $2 AND size = $3`,
+          [item.qty, item.product_id, item.size]
+        )
+      }
     }
 
     await client.query('COMMIT')
@@ -332,28 +327,12 @@ export async function createOrder(data: {
   }
 }
 
-async function getEnumCompatibleValue(
-  client: any,
-  tableName: string,
-  columnName: string,
-  value: string
-): Promise<string> {
-  const { rows } = await client.query(
-    `SELECT e.enumlabel
-     FROM pg_attribute a
-     JOIN pg_class c ON c.oid = a.attrelid
-     JOIN pg_type t ON t.oid = a.atttypid
-     JOIN pg_enum e ON e.enumtypid = t.oid
-     WHERE c.relname = $1 AND a.attname = $2
-     ORDER BY e.enumsortorder`,
-    [tableName, columnName]
-  )
+// ─── Utils ────────────────────────────────────────────────────────────────────
 
-  const labels = rows.map((row: { enumlabel: string }) => row.enumlabel)
-  if (labels.includes(value)) return value
-
-  const upperValue = value.toUpperCase()
-  if (labels.includes(upperValue)) return upperValue
-
-  return value
+function hashCode(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0
+  }
+  return hash
 }
