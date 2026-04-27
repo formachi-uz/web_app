@@ -303,7 +303,7 @@ async function buildProductQuery(filter: ProductFilter = {}, productId?: number)
       ${productField(productColumns, 'league', 'NULL::text')},
       ${productField(productColumns, 'brand', 'NULL::text')},
       ${productField(productColumns, 'model', 'NULL::text')},
-      ${productColumns.has('customization_status') ? `COALESCE(p.customization_status, 'not_available')` : `'not_available'`} AS customization_status,
+      ${productColumns.has('customization_status') ? `LOWER(COALESCE(p.customization_status::text, 'not_available'))` : `'not_available'`} AS customization_status,
       ${productColumns.has('customization_price') ? `COALESCE(p.customization_price, 50000)` : '50000'} AS customization_price,
       ${productColumns.has('is_customizable') ? `COALESCE(p.is_customizable, false)` : 'false'} AS is_customizable,
       ${productColumns.has('is_featured') ? `COALESCE(p.is_featured, false)` : 'false'} AS is_featured,
