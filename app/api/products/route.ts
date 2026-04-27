@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProducts } from '@/lib/crud'
+import { getProducts } from '../../../lib/crud'
 
 export async function GET(request: NextRequest) {
   try {
