@@ -14,7 +14,14 @@ export default async function CatalogPage({
   const team = searchParams.team || ''
   
   // Note: You must update `getProducts` in lib/db.ts to accept the `team` parameter.
-  const [categories, products] = await Promise.all([getCategories(), getProducts(categoryId, query, team)])
+const [categories, products] = await Promise.all([
+  getCategories(),
+  getProducts({
+    categoryId,
+    search: query,
+    team,
+  }),
+])
 
   const activeCategory = categories.find((c) => c.id === categoryId)
 
