@@ -1,14 +1,17 @@
 'use client'
+
 import { useEffect, useState } from 'react'
-import { useCart } from '@/lib/cart'
-import { Product } from '@/lib/db'
-import { ShoppingCart, Zap, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ChevronLeft, Minus, Plus, Send, ShoppingCart, Zap, ZoomIn } from 'lucide-react'
+import { useCart } from '@/lib/cart'
+import { Product } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
 
 export default function ProductDetailClient({ product }: { product: Product }) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [quantity, setQuantity] = useState(1)
+  const [selectedPreview, setSelectedPreview] = useState(0)
   const [backPrint, setBackPrint] = useState<boolean | null>(null)
   const [printName, setPrintName] = useState('')
   const [added, setAdded] = useState(false)
@@ -19,7 +22,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const isForma = [1, 2].includes(product.category_id)
   const availableStocks = product.stocks.filter((s) => s.quantity > 0)
   const totalStock = availableStocks.reduce((sum, stock) => sum + stock.quantity, 0)
-  const stockLabel = totalStock === 0 ? 'Tugagan' : totalStock <= 3 ? `Kam qoldi: ${totalStock} ta` : `Sotuvda: ${totalStock} ta`
+  const stockLabel = totalStock === 0 ? 'Tugagan' : totalStock <= 3 ? `Kam qoldi: ${totalStock} ta` : 'Sotuvda bor'
+  const previewSlots = product.photo_url ? ['Asosiy', 'Detal', 'Komplekt'] : ['FORMACHI']
+  const telegramUrl = `https://t.me/Formachi_uzBot?start=product_${product.id}`
 
   useEffect(() => {
     trackEvent('product_view', {
@@ -28,6 +33,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       price: Math.round(product.final_price),
     })
   }, [product.id, product.category_id, product.final_price])
+
+  const openCart = () => {
+    const drawer = document.getElementById('cart-drawer')
+    const backdrop = document.getElementById('cart-backdrop')
+    if (drawer) drawer.style.transform = 'translateX(0)'
+    if (backdrop) {
+      backdrop.style.opacity = '1'
+      backdrop.style.pointerEvents = 'auto'
+    }
+  }
 
   const handleAddToCart = (goCheckout = false) => {
     if (!selectedSize && availableStocks.length > 0) {
@@ -48,6 +63,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       product_id: product.id,
       category_id: product.category_id,
       size: selectedSize,
+      qty: quantity,
       back_print: Boolean(backPrint),
       price: Math.round(price),
     })
@@ -56,7 +72,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       product_id: product.id,
       name: product.name,
       price,
-      qty: 1,
+      qty: quantity,
       size: selectedSize,
       back_print: backPrint ? printName.trim() : null,
       photo_url: product.photo_url,
@@ -67,19 +83,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     } else {
       setAdded(true)
       setTimeout(() => setAdded(false), 2000)
-      const drawer = document.getElementById('cart-drawer')
-      if (drawer) drawer.style.transform = 'translateX(0)'
+      openCart()
     }
   }
 
   return (
-    <div>
-      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '16px 0' }}>
+    <div className="product-page">
+      <div className="product-breadcrumb">
         <div className="container">
-          <Link href="/catalog" style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            color: 'var(--muted)', textDecoration: 'none', fontSize: 13,
-          }}>
+          <Link href="/catalog">
             <ChevronLeft size={16} /> Katalogga qaytish
           </Link>
         </div>
@@ -87,73 +99,88 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
       <div className="container product-detail-container">
         <div className="product-detail-grid">
-          <div>
-            <div className="product-image-frame" style={{
-              aspectRatio: '1', borderRadius: 16, overflow: 'hidden', background: 'var(--surface)',
-              border: '1px solid var(--border)', position: 'relative',
-            }}>
+          <div className="product-gallery">
+            <div className="product-thumbs">
+              {previewSlots.map((slot, index) => (
+                <button
+                  key={slot}
+                  type="button"
+                  className={selectedPreview === index ? 'product-thumb active' : 'product-thumb'}
+                  onClick={() => setSelectedPreview(index)}
+                  aria-label={`${slot} rasm`}
+                >
+                  {product.photo_url ? (
+                    <img src={`/api/photo?file_id=${product.photo_url}`} alt={`${product.name} ${slot}`} />
+                  ) : (
+                    <span>FM</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="product-image-frame">
               {product.photo_url ? (
                 <img
                   src={`/api/photo?file_id=${product.photo_url}`}
                   alt={product.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={(event) => { event.currentTarget.style.display = 'none' }}
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none'
+                  }}
                 />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 80, color: 'var(--muted)' }}>⚽</div>
+                <div className="product-image-placeholder">FORMACHI</div>
               )}
-              {hasDiscount && (
-                <div style={{ position: 'absolute', top: 16, left: 16, background: 'var(--danger)', color: '#fff', fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, padding: '4px 12px', borderRadius: 6 }}>
-                  -{Math.round(product.discount_percent)}%
-                </div>
-              )}
+              <button type="button" className="product-zoom" aria-label="Rasmni yaqin ko'rish">
+                <ZoomIn size={18} />
+              </button>
+              {hasDiscount && <div className="product-sale-badge">-{Math.round(product.discount_percent)}%</div>}
               <div className={totalStock <= 3 ? 'product-stock-badge product-stock-low' : 'product-stock-badge'}>
                 {stockLabel}
               </div>
             </div>
           </div>
 
-          <div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>
+          <div className="product-info-panel">
+            <span className="section-kicker">
               {product.category_emoji} {product.category_name}
-            </div>
-            <h1 className="product-title" style={{ fontFamily: 'var(--font-display)', fontSize: 40, letterSpacing: 1, lineHeight: 1, marginBottom: 16 }}>
-              {product.name}
-            </h1>
+            </span>
+            <h1 className="product-title">{product.name}</h1>
 
             {product.review_count > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                <div className="stars">{'★'.repeat(Math.round(product.avg_rating)) + '☆'.repeat(5 - Math.round(product.avg_rating))}</div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)' }}>
+              <div className="product-review-row">
+                <div className="stars">
+                  {'\u2605'.repeat(Math.round(product.avg_rating))}
+                  {'\u2606'.repeat(5 - Math.round(product.avg_rating))}
+                </div>
+                <span>
                   {product.avg_rating.toFixed(1)} ({product.review_count} ta sharh)
                 </span>
               </div>
             )}
 
-            <div className="price-box" style={{ marginBottom: 28, padding: '20px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)' }}>
-              {hasDiscount && (
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: 'var(--muted)', textDecoration: 'line-through', marginBottom: 4 }}>
-                  {product.price.toLocaleString()} so'm
-                </div>
-              )}
-              <div className="product-price" style={{ fontFamily: 'var(--font-display)', fontSize: 40, color: 'var(--accent)', letterSpacing: 1 }}>
-                {Math.round(product.final_price).toLocaleString()}
-                <span style={{ fontSize: 18, fontFamily: 'var(--font-mono)', marginLeft: 8 }}>so'm</span>
-              </div>
-              {isForma && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>+ ism yozish: 50,000 so'm (ixtiyoriy)</div>}
+            <div className="price-box">
+              {hasDiscount && <del>{product.price.toLocaleString()} so'm</del>}
+              <strong className="product-price">
+                {Math.round(product.final_price).toLocaleString()} <span>so'm</span>
+              </strong>
+              {isForma && <small>+ ism yozish: 50,000 so'm (ixtiyoriy)</small>}
               {availableStocks.length > 0 && (
                 <div className="detail-size-strip">
-                  {availableStocks.map((stock) => <span key={stock.size}>{stock.size} · {stock.quantity} ta</span>)}
+                  {availableStocks.map((stock) => (
+                    <span key={stock.size}>
+                      {stock.size} · {stock.quantity} ta
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
 
-            {product.description && <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 28 }}>{product.description}</p>}
+            {product.description && <p className="product-description">{product.description}</p>}
 
             {availableStocks.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>O'lchamni tanlang</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div className="product-option-block">
+                <span className="field-label">O'lchamni tanlang</span>
+                <div className="detail-size-row">
                   {product.stocks.map((stock) => {
                     const isOut = stock.quantity === 0
                     const isLow = stock.quantity > 0 && stock.quantity <= 2
@@ -161,20 +188,14 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                     return (
                       <button
                         key={stock.size}
+                        type="button"
                         disabled={isOut}
                         onClick={() => setSelectedSize(stock.size)}
-                        style={{
-                          padding: '10px 18px', borderRadius: 8,
-                          border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
-                          background: isSel ? 'rgba(0,229,160,0.1)' : 'var(--surface2)',
-                          color: isOut ? 'var(--muted)' : isSel ? 'var(--accent)' : 'var(--text)',
-                          cursor: isOut ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-mono)',
-                          fontSize: 13, fontWeight: 600, opacity: isOut ? 0.4 : 1, position: 'relative',
-                        }}
+                        className={isSel ? 'size-option active' : 'size-option'}
                       >
                         {stock.size}
-                        {isLow && !isOut && <span style={{ position: 'absolute', top: -6, right: -6, background: '#ffa502', color: '#000', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4 }}>⚠️</span>}
-                        {isOut && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, opacity: 0.3 }}>✕</span>}
+                        {isLow && !isOut && <i>!</i>}
+                        {isOut && <em>×</em>}
                       </button>
                     )
                   })}
@@ -182,49 +203,67 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
             )}
 
+            <div className="product-option-block">
+              <span className="field-label">Miqdor</span>
+              <div className="qty-control">
+                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))}>
+                  <Minus size={15} />
+                </button>
+                <span>{quantity}</span>
+                <button type="button" onClick={() => setQuantity((value) => value + 1)}>
+                  <Plus size={15} />
+                </button>
+              </div>
+            </div>
+
             {isForma && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 2, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 12 }}>✍️ Forma orqasiga ism yozish (+50,000 so'm)</div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div className="product-option-block">
+                <span className="field-label">Forma orqasiga ism yozish (+50,000 so'm)</span>
+                <div className="print-choice-row">
                   {[
                     { val: false, label: "Yo'q, kerak emas" },
                     { val: true, label: 'Ha, yozdiraman' },
                   ].map((opt) => (
-                    <button key={String(opt.val)} onClick={() => setBackPrint(opt.val)} style={{
-                      flex: 1, padding: '10px 16px', borderRadius: 8,
-                      border: `1px solid ${backPrint === opt.val ? 'var(--accent)' : 'var(--border)'}`,
-                      background: backPrint === opt.val ? 'rgba(0,229,160,0.1)' : 'var(--surface2)',
-                      color: backPrint === opt.val ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                    }}>{opt.label}</button>
+                    <button
+                      key={String(opt.val)}
+                      type="button"
+                      onClick={() => setBackPrint(opt.val)}
+                      className={backPrint === opt.val ? 'print-choice active' : 'print-choice'}
+                    >
+                      {opt.label}
+                    </button>
                   ))}
                 </div>
                 {backPrint && (
-                  <input className="input" placeholder="Masalan: HUSANOV 45" value={printName} onChange={(event) => setPrintName(event.target.value.toUpperCase())} maxLength={25} style={{ letterSpacing: 2, fontFamily: 'var(--font-mono)' }} />
+                  <input
+                    className="input"
+                    placeholder="Masalan: HUSANOV 45"
+                    value={printName}
+                    onChange={(event) => setPrintName(event.target.value.toUpperCase())}
+                    maxLength={25}
+                  />
                 )}
               </div>
             )}
 
             <div className="product-actions">
-              <button className="btn btn-primary" style={{ flex: 1, fontSize: 14 }} onClick={() => handleAddToCart(false)}>
-                {added ? '✅ Qo\'shildi!' : <><ShoppingCart size={16} /> Savatga</>}
+              <button className="btn btn-primary" onClick={() => handleAddToCart(false)}>
+                {added ? "Qo'shildi!" : <><ShoppingCart size={17} /> Savatga qo'shish</>}
               </button>
-              <button className="btn btn-secondary" style={{ flex: 1, fontSize: 14 }} onClick={() => handleAddToCart(true)}>
-                <Zap size={16} /> Tezkor buyurtma
+              <button className="btn btn-secondary" onClick={() => handleAddToCart(true)}>
+                <Zap size={17} /> Hozir buyurtma
               </button>
             </div>
 
-            <div style={{ marginTop: 24, padding: 16, background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { icon: '🚚', text: 'BTS pochta orqali 1-3 kun' },
-                  { icon: '📦', text: 'Yetkazish: 20,000 - 30,000 so\'m' },
-                  { icon: '✅', text: 'Sifat kafolati' },
-                ].map((item) => (
-                  <div key={item.text} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, color: 'var(--muted)' }}>
-                    <span>{item.icon}</span> {item.text}
-                  </div>
-                ))}
-              </div>
+            <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="btn btn-telegram product-telegram">
+              <Send size={17} />
+              Telegram orqali buyurtma
+            </a>
+
+            <div className="product-service-list">
+              <span>1-3 kun ichida yetkazish</span>
+              <span>Yetkazish: 20,000 - 30,000 so'm</span>
+              <span>Sifat nazorati</span>
             </div>
           </div>
         </div>
