@@ -14,6 +14,7 @@ export default function ProductCard({ product }: { product: Product }) {
     .filter((stock) => (stock.available ?? stock.quantity) > 0)
     .map((stock) => stock.size)
   const rating = Math.max(1, Math.round(product.avg_rating || 5))
+  const imageSrc = toPhotoSrc(product.photo_url)
 
   return (
     <Link
@@ -28,9 +29,9 @@ export default function ProductCard({ product }: { product: Product }) {
       }
     >
       <div className="shop-product-image">
-        {product.photo_url ? (
+        {imageSrc ? (
           <img
-            src={`/api/photo?file_id=${product.photo_url}`}
+            src={imageSrc}
             alt={product.name}
             onError={(event) => {
               event.currentTarget.style.display = 'none'
@@ -85,4 +86,10 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
     </Link>
   )
+}
+
+function toPhotoSrc(photoUrl: string | null) {
+  if (!photoUrl) return null
+  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://') || photoUrl.startsWith('/')) return photoUrl
+  return `/api/photo?file_id=${encodeURIComponent(photoUrl)}`
 }
