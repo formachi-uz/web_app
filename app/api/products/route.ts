@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProducts } from '@/lib/db'
+import { getProducts } from '@/lib/crud'
 
-export const dynamic = 'force-dynamic'
-
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const categoryId = searchParams.get('category')
-      ? parseInt(searchParams.get('category')!)
-      : undefined
-    const products = await getProducts(categoryId)
+    const { searchParams } = new URL(request.url)
+
+    const categoryIdParam = searchParams.get('category')
+    const categoryId = categoryIdParam ? Number(categoryIdParam) : undefined
+
+    const products = await getProducts({
+      categoryId,
+    })
+
     return NextResponse.json(products)
   } catch (error) {
     console.error('Products API error:', error)
-    return NextResponse.json({ error: 'Server xatosi' }, { status: 500 })
+
+    return NextResponse.json(
+      { error: 'Mahsulotlarni yuklashda xatolik yuz berdi' },
+      { status: 500 }
+    )
   }
 }
