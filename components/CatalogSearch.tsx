@@ -23,12 +23,16 @@ export default function CatalogSearch({
   const filteredProducts = useMemo(() => {
     if (!normalizedQuery) return products
     return products.filter((product) => {
-      const sizes = product.stocks.map((stock) => stock.size).join(' ')
+      const sizes = (product.stocks ?? []).map((stock) => stock.size).join(' ')
       const haystack = normalize(
         [
           product.name,
           product.description || '',
           product.category_name || '',
+          product.team || '',
+          product.brand || '',
+          product.season || '',
+          product.kit_type || '',
           sizes,
           String(Math.round(product.final_price)),
         ].join(' ')
@@ -91,7 +95,7 @@ export default function CatalogSearch({
 function normalize(value: string) {
   return value
     .toLowerCase()
-    .replace(/['’`]/g, '')
+    .replace(/['\u2019`]/g, '')
     .replace(/-/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
