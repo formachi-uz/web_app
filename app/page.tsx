@@ -94,7 +94,7 @@ export default async function HomePage() {
               </div>
               <strong className="text-[11px] text-center text-gray-300 uppercase tracking-wide group-hover:text-accent">
                 {team.name}
-              strong>
+              </strong>
             </Link>
           ))}
         </div>
