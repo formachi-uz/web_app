@@ -11,16 +11,23 @@ export async function GET(request: NextRequest) {
       ? Number(searchParams.get('category'))
       : undefined
 
+    const teamParam = searchParams.get('team')
+    const brandParam = searchParams.get('brand')
+
     const teamId = searchParams.get('teamId')
       ? Number(searchParams.get('teamId'))
-      : undefined
+      : teamParam && /^\d+$/.test(teamParam)
+        ? Number(teamParam)
+        : undefined
 
     const brandId = searchParams.get('brandId')
       ? Number(searchParams.get('brandId'))
-      : undefined
+      : brandParam && /^\d+$/.test(brandParam)
+        ? Number(brandParam)
+        : undefined
 
-    const team = searchParams.get('team') || undefined
-    const brand = searchParams.get('brand') || undefined
+    const team = teamParam && !/^\d+$/.test(teamParam) ? teamParam : undefined
+    const brand = brandParam && !/^\d+$/.test(brandParam) ? brandParam : undefined
     const search = searchParams.get('search') || searchParams.get('q') || undefined
     const mainCategory = searchParams.get('mainCategory') || undefined
     const productType = searchParams.get('productType') || undefined
