@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Product } from '@/lib/db'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingBag } from 'lucide-react'
 import { trackEvent } from '@/lib/analytics'
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -15,11 +15,13 @@ export default function ProductCard({ product }: { product: Product }) {
     <Link
       href={`/product/${product.id}`}
       className="shop-product-card"
-      onClick={() => trackEvent('product_click', {
-        product_id: product.id,
-        category_id: product.category_id,
-        price: Math.round(product.final_price),
-      })}
+      onClick={() =>
+        trackEvent('product_click', {
+          product_id: product.id,
+          category_id: product.category_id,
+          price: Math.round(product.final_price),
+        })
+      }
     >
       <div className="shop-product-image">
         {product.photo_url ? (
@@ -34,33 +36,44 @@ export default function ProductCard({ product }: { product: Product }) {
           <div className="shop-product-placeholder">FORMACHI</div>
         )}
 
+        {stockStatus !== 'out' && <span className="shop-stock-pill">Sotuvda bor</span>}
         {hasDiscount && <span className="shop-badge shop-badge-sale">-{Math.round(product.discount_percent)}%</span>}
         {stockStatus === 'low' && <span className="shop-badge shop-badge-low">Kam qoldi</span>}
         {stockStatus === 'out' && <div className="shop-out">TUGADI</div>}
       </div>
 
       <div className="shop-product-body">
-        <div className="shop-product-category">{product.category_emoji} {product.category_name}</div>
+        <div className="shop-product-category">
+          {product.category_emoji} {product.category_name}
+        </div>
         <h3>{product.name}</h3>
 
         <div className="shop-rating">
-          <span className="stars">{'★'.repeat(Math.max(1, Math.round(product.avg_rating || 5)))}</span>
-          <small>{product.review_count > 0 ? `${product.review_count} sharh` : 'Sotuvda mavjud'}</small>
+          <span className="stars">{'\u2605'.repeat(Math.max(1, Math.round(product.avg_rating || 5)))}</span>
+          <small>{product.review_count > 0 ? `${product.review_count} sharh` : 'Premium tanlov'}</small>
         </div>
 
         {availableSizes.length > 0 && (
           <div className="card-size-row">
-            {availableSizes.slice(0, 5).map((size) => <span key={size}>{size}</span>)}
+            {availableSizes.slice(0, 6).map((size) => (
+              <span key={size}>{size}</span>
+            ))}
           </div>
         )}
 
         <div className="shop-product-footer">
           <div>
             {hasDiscount && <del>{product.price.toLocaleString()} so'm</del>}
-            <strong>{Math.round(product.final_price).toLocaleString()} <span>so'm</span></strong>
+            <strong>
+              {Math.round(product.final_price).toLocaleString()} <span>so'm</span>
+            </strong>
           </div>
-          <span className="shop-cart-icon"><ShoppingCart size={17} /></span>
         </div>
+
+        <span className="shop-order-btn">
+          <ShoppingBag size={17} />
+          Buyurtma berish
+        </span>
       </div>
     </Link>
   )
