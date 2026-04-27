@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="uz">
       <body className="noise">
         <Navbar />
-        <main style={{ paddingTop: '70px' }}>{children}</main>
+        <main className="site-main">{children}</main>
         <Footer />
         <CartDrawer />
         <CartAnalytics />
