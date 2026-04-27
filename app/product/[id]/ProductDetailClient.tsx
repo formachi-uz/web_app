@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Minus, Plus, Send, ShoppingCart, Zap, ZoomIn } from 'lucide-react'
+import { ChevronLeft, Home, Minus, Plus, Send, ShoppingCart, Zap, ZoomIn } from 'lucide-react'
 import { useCart } from '@/lib/cart'
 import { Product } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
@@ -20,13 +20,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
   const hasDiscount = product.discount_percent > 0
   const customizationStatus = product.customization_status ?? 'not_available'
-  const canCustomize = product.is_customizable || customizationStatus !== 'not_available'
+  const isForma = isFormaProduct(product)
+  const canCustomize = product.is_customizable || customizationStatus !== 'not_available' || isForma
   const customizationPrice = customizationStatus === 'included_bonus' ? 0 : Number(product.customization_price ?? 50000)
   const stocks = product.stocks ?? []
   const availableStocks = stocks.filter((stock) => (stock.available ?? stock.quantity) > 0)
   const totalStock = availableStocks.reduce((sum, stock) => sum + (stock.available ?? stock.quantity), 0)
   const stockLabel = totalStock === 0 ? 'Tugagan' : totalStock <= 3 ? `Kam qoldi: ${totalStock} ta` : 'Sotuvda bor'
-  const previewSlots = product.photo_url ? ['Asosiy', 'Detal', 'Komplekt'] : ['FORMACHI']
+  const galleryImages = buildGalleryImages(product)
+  const previewSlots = galleryImages.length > 0 ? galleryImages : [{ label: 'FORMACHI', src: '' }]
+  const selectedImage = previewSlots[Math.min(selectedPreview, previewSlots.length - 1)]
   const telegramUrl = `https://t.me/Formachi_uzBot?start=product_${product.id}`
 
   useEffect(() => {
@@ -93,7 +96,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   return (
     <div className="product-page">
       <div className="product-breadcrumb">
-        <div className="container">
+        <div className="container product-breadcrumb-row">
+          <Link href="/">
+            <Home size={16} /> Asosiy menyu
+          </Link>
           <Link href="/catalog">
             <ChevronLeft size={16} /> Katalogga qaytish
           </Link>
@@ -106,14 +112,14 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             <div className="product-thumbs">
               {previewSlots.map((slot, index) => (
                 <button
-                  key={slot}
+                  key={`${slot.label}-${index}`}
                   type="button"
                   className={selectedPreview === index ? 'product-thumb active' : 'product-thumb'}
                   onClick={() => setSelectedPreview(index)}
-                  aria-label={`${slot} rasm`}
+                  aria-label={`${slot.label} rasm`}
                 >
-                  {product.photo_url ? (
-                    <img src={`/api/photo?file_id=${product.photo_url}`} alt={`${product.name} ${slot}`} />
+                  {slot.src ? (
+                    <img src={slot.src} alt={`${product.name} ${slot.label}`} />
                   ) : (
                     <span>FM</span>
                   )}
@@ -122,9 +128,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             </div>
 
             <div className="product-image-frame">
-              {product.photo_url ? (
+              {selectedImage?.src ? (
                 <img
-                  src={`/api/photo?file_id=${product.photo_url}`}
+                  src={selectedImage.src}
                   alt={product.name}
                   onError={(event) => {
                     event.currentTarget.style.display = 'none'
@@ -173,7 +179,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               {canCustomize && (
                 <small>
                   {customizationStatus === 'included_bonus'
-                    ? "Ism va raqam yozish bonus sifatida bepul"
+                    ? 'Ism va raqam yozish bonus sifatida bepul'
                     : `+ ism yozish: ${customizationPrice.toLocaleString()} so'm (ixtiyoriy)`}
                 </small>
               )}
@@ -288,4 +294,33 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       </div>
     </div>
   )
+}
+
+function isFormaProduct(product: Product) {
+  const source = product as unknown as Record<string, unknown>
+  const text = [
+    product.name,
+    product.category_name,
+    source.main_category,
+    source.product_type,
+  ].map((value) => String(value ?? '').toLowerCase()).join(' ')
+  return text.includes('forma') || text.includes('jersey') || text.includes('kit')
+}
+
+function buildGalleryImages(product: Product) {
+  const source = product as unknown as Record<string, unknown>
+  const values = [product.photo_url, source.gallery]
+    .flatMap((value) => String(value ?? '').split(','))
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  return Array.from(new Set(values)).map((value, index) => ({
+    label: index === 0 ? 'Asosiy' : `Rasm ${index + 1}`,
+    src: toPhotoSrc(value),
+  }))
+}
+
+function toPhotoSrc(value: string) {
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) return value
+  return `/api/photo?file_id=${encodeURIComponent(value)}`
 }
