@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Minus, Plus, Send, ShieldCheck, Shirt, Truck, ZoomIn } from 'lucide-react'
-import { getProducts, getReviews, Product } from '@/lib/db'
+import { Send, ShieldCheck, Shirt, Truck } from 'lucide-react'
+import { getProducts, getReviews } from '@/lib/db'
 import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 60
@@ -22,8 +22,7 @@ export default async function HomePage() {
   const [products, reviews] = await Promise.all([getProducts(), getReviews()])
 
   const featuredProducts = products.slice(0, 8)
-  const bootProducts = products.filter((p) => p.category_name?.toLowerCase().includes('butsa')).slice(0, 4)
-  
+
   let avgRating = '5.0'
   if (reviews.length > 0) {
     const sum = reviews.reduce((s, r) => s + r.rating, 0)
@@ -32,16 +31,14 @@ export default async function HomePage() {
 
   return (
     <div className="store-home bg-bg text-white min-h-screen">
-      
       {/* 1. PREMIUM PROMO HERO SECTION */}
       <section className="container mx-auto px-4 py-8 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
           {/* Top Forma Promo Block */}
           <Link href="/catalog?category=formalar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
-            <img 
-              src="/images/premium-jersey-promo.jpg" 
-              alt="Top Formalar" 
+            <img
+              src="/images/premium-jersey-promo.jpg"
+              alt="Top Formalar"
               className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -56,9 +53,9 @@ export default async function HomePage() {
 
           {/* Premium Butsi Promo Block */}
           <Link href="/catalog?category=butsiylar" className="relative group overflow-hidden rounded-2xl aspect-[4/3] md:aspect-video bg-surface2 border border-border hover:border-accent transition-all duration-300">
-            <img 
-              src="/images/premium-boot-promo.jpg" 
-              alt="Premium Butsiylar" 
+            <img
+              src="/images/premium-boot-promo.jpg"
+              alt="Premium Butsiylar"
               className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -70,7 +67,6 @@ export default async function HomePage() {
               <p className="text-gray-300 text-sm md:text-base">Maydonda o'z kuchingizni ko'rsating</p>
             </div>
           </Link>
-
         </div>
       </section>
 
@@ -85,11 +81,10 @@ export default async function HomePage() {
               className="flex-shrink-0 snap-start flex flex-col items-center justify-center bg-surface border border-border rounded-xl p-4 w-[100px] hover:border-accent hover:shadow-[0_0_15px_rgba(0,229,160,0.15)] transition-all group"
             >
               <div className="w-14 h-14 mb-3 flex items-center justify-center">
-                <img 
-                  src={team.logo} 
-                  alt={team.name} 
+                <img
+                  src={team.logo}
+                  alt={team.name}
                   className="max-w-full max-h-full object-contain filter drop-shadow-md group-hover:scale-110 transition-transform"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
               </div>
               <strong className="text-[11px] text-center text-gray-300 uppercase tracking-wide group-hover:text-accent">
