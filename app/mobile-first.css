@@ -1,0 +1,188 @@
+/* Mobile-first checkout and product-detail polish for FORMACHI. */
+
+.product-notice {
+  margin-top: 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,71,87,.22);
+  border-radius: 12px;
+  background: rgba(255,71,87,.08);
+  color: #ff8b96;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.product-mobile-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid rgba(57,255,136,.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(57,255,136,.08), rgba(255,255,255,.035));
+}
+
+.product-mobile-summary div { min-width: 0; }
+
+.product-mobile-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.product-mobile-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.product-mobile-summary div:last-child strong {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.delivery-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.delivery-zone {
+  min-height: 66px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  text-align: left;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.delivery-zone span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.delivery-zone.active {
+  border-color: var(--accent);
+  background: rgba(57,255,136,.1);
+  box-shadow: 0 0 0 3px rgba(57,255,136,.09);
+}
+
+.delivery-note {
+  margin-top: -4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(57,255,136,.16);
+  border-radius: 12px;
+  background: rgba(57,255,136,.06);
+  color: rgba(247,251,255,.74);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.payment-help-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card-number-box {
+  padding: 12px;
+  border: 1px solid rgba(215,182,106,.24);
+  border-radius: 14px;
+  background: rgba(215,182,106,.08);
+  text-align: left;
+}
+
+.card-number-box span,
+.check-upload-rules {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.card-number-box strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.check-upload-box {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.check-upload-label {
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 1px dashed rgba(57,255,136,.34);
+  border-radius: 14px;
+  background: rgba(57,255,136,.06);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.check-upload-label input { display: none; }
+
+.check-upload-file,
+.check-upload-message {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  color: rgba(247,251,255,.72);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.check-upload-message { border: 1px solid rgba(57,255,136,.15); }
+
+@media (max-width: 720px) {
+  body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .product-detail-container { padding-top: 14px; }
+  .product-detail-grid { gap: 14px; }
+  .product-info-panel { padding: 16px; border-radius: 14px; }
+  .product-title { margin-top: 12px; font-size: 32px; }
+  .product-image-frame { min-height: 300px; }
+  .product-actions {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px;
+    margin: 20px -16px 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .product-actions .btn { min-height: 42px; padding: 10px 8px; font-size: 12px; }
+  .checkout-container { padding-top: 18px !important; }
+  .summary-card,
+  .success-card,
+  .order-summary { padding: 14px; margin-bottom: 18px; border-radius: 14px; }
+  .summary-row { align-items: flex-start; font-size: 12px; }
+}
+
+@media (max-width: 380px) {
+  .delivery-zone-grid,
+  .product-mobile-summary { grid-template-columns: 1fr; }
+}
