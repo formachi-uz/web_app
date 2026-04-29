@@ -6,14 +6,22 @@ export const dynamic = 'force-dynamic'
 const BOT_TOKEN = process.env.BOT_TOKEN!
 const GROUP_CHECKS_ID = process.env.GROUP_CHECKS_ID || '-1003912030329'
 const ADMIN_ID = process.env.GLAVNIY_ADMIN_ID || '8156792282'
+const MAX_CHECK_SIZE = 10 * 1024 * 1024
 
 function checkActionsKeyboard(orderId: string) {
   return {
     inline_keyboard: [[
-      { text: '✅ Chekni tasdiqlash', callback_data: `check_confirm_${orderId}` },
-      { text: '❌ Rad etish', callback_data: `check_reject_${orderId}` },
+      { text: 'Chekni tasdiqlash', callback_data: `check_confirm_${orderId}` },
+      { text: 'Rad etish', callback_data: `check_reject_${orderId}` },
     ]],
   }
+}
+
+function validateCheckFile(file: File) {
+  const isAllowedType = file.type.startsWith('image/') || file.type === 'application/pdf'
+  if (!isAllowedType) return "Chek rasm yoki PDF formatida bo'lishi kerak"
+  if (file.size > MAX_CHECK_SIZE) return "Chek fayli 10 MB dan kichik bo'lishi kerak"
+  return ''
 }
 
 function buildTelegramForm(chatId: string, orderId: string, caption: string, file: File) {
@@ -51,11 +59,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Chek fayli topilmadi' }, { status: 400 })
     }
 
+    const validationError = validateCheckFile(file)
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
+    }
+
     const caption =
-      `💳 <b>YANGI CHEK — Buyurtma #${orderId}</b>\n` +
-      `${'─'.repeat(24)}\n` +
-      `👤 ${customerName || 'Sayt mijozi'}\n` +
-      `📱 ${customerPhone || '—'}`
+      `<b>YANGI CHEK - Buyurtma #${orderId}</b>\n` +
+      `${'-'.repeat(24)}\n` +
+      `Mijoz: ${customerName || 'Sayt mijozi'}\n` +
+      `Telefon: ${customerPhone || '-'}\n` +
+      `Fayl: ${file.name || 'check'}`
 
     const res = await sendCheck(GROUP_CHECKS_ID, orderId, caption, file)
     if (res.ok) {
