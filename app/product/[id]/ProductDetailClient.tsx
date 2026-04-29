@@ -15,22 +15,31 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [backPrint, setBackPrint] = useState<boolean | null>(null)
   const [printName, setPrintName] = useState('')
   const [added, setAdded] = useState(false)
+  const [notice, setNotice] = useState('')
   const addItem = useCart((s) => s.addItem)
   const router = useRouter()
 
   const hasDiscount = product.discount_percent > 0
   const customizationStatus = product.customization_status ?? 'not_available'
-  const isForma = isFormaProduct(product)
+  const isForma = `${product.category_name || ''} ${product.name} ${product.main_category || ''} ${product.product_type || ''}`
+    .toLowerCase()
+    .includes('forma')
   const canCustomize = product.is_customizable || customizationStatus !== 'not_available' || isForma
   const customizationPrice = customizationStatus === 'included_bonus' ? 0 : Number(product.customization_price ?? 50000)
   const stocks = product.stocks ?? []
   const availableStocks = stocks.filter((stock) => (stock.available ?? stock.quantity) > 0)
   const totalStock = availableStocks.reduce((sum, stock) => sum + (stock.available ?? stock.quantity), 0)
   const stockLabel = totalStock === 0 ? 'Tugagan' : totalStock <= 3 ? `Kam qoldi: ${totalStock} ta` : 'Sotuvda bor'
+  const firstAvailableSize = availableStocks[0]?.size ?? null
+  const selectedStock = selectedSize ? stocks.find((stock) => stock.size === selectedSize) : null
+  const selectedAvailable = selectedStock ? (selectedStock.available ?? selectedStock.quantity) : totalStock || 1
+  const maxQuantity = Math.max(1, selectedAvailable)
   const galleryImages = buildGalleryImages(product)
   const previewSlots = galleryImages.length > 0 ? galleryImages : [{ label: 'FORMACHI', src: '' }]
-  const selectedImage = previewSlots[Math.min(selectedPreview, previewSlots.length - 1)]
   const telegramUrl = `https://t.me/Formachi_uzBot?start=product_${product.id}`
+  const unitPrice = product.final_price + (canCustomize && backPrint ? customizationPrice : 0)
+  const orderTotal = unitPrice * quantity
+  const selectedSizeLabel = selectedSize || (availableStocks.length > 0 ? "O'lcham tanlanmagan" : "O'lcham talab qilinmaydi")
 
   useEffect(() => {
     trackEvent('product_view', {
@@ -39,6 +48,20 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       price: Math.round(product.final_price),
     })
   }, [product.id, product.category_id, product.final_price])
+
+  useEffect(() => {
+    setSelectedSize(firstAvailableSize)
+    setQuantity(1)
+    setNotice('')
+  }, [product.id, firstAvailableSize])
+
+  useEffect(() => {
+    setQuantity((value) => Math.min(value, maxQuantity))
+  }, [maxQuantity])
+
+  useEffect(() => {
+    if (canCustomize) setBackPrint(false)
+  }, [product.id, canCustomize])
 
   const openCart = () => {
     const drawer = document.getElementById('cart-drawer')
@@ -51,33 +74,41 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   }
 
   const handleAddToCart = (goCheckout = false) => {
+    setNotice('')
+    if (stocks.length > 0 && totalStock === 0) {
+      setNotice('Bu mahsulot hozircha sotuvda yoq.')
+      return
+    }
     if (!selectedSize && availableStocks.length > 0) {
-      alert("O'lchamni tanlang!")
+      setNotice("O'lchamni tanlang.")
       return
     }
     if (canCustomize && backPrint === null) {
-      alert('Ism yozish haqida qaror qiling!')
+      setNotice('Ism va raqam yozish kerak yoki kerak emasligini tanlang.')
       return
     }
     if (canCustomize && backPrint && !printName.trim()) {
-      alert('Ism va raqamni kiriting!')
+      setNotice('Forma orqasiga yoziladigan ism va raqamni kiriting.')
+      return
+    }
+    if (availableStocks.length > 0 && quantity > maxQuantity) {
+      setNotice(`Bu o'lchamdan ${maxQuantity} ta mavjud.`)
       return
     }
 
-    const price = product.final_price + (canCustomize && backPrint ? customizationPrice : 0)
     trackEvent(goCheckout ? 'buy_now' : 'add_to_cart', {
       product_id: product.id,
       category_id: product.category_id,
       size: selectedSize,
       qty: quantity,
       back_print: Boolean(backPrint),
-      price: Math.round(price),
+      price: Math.round(unitPrice),
     })
 
     addItem({
       product_id: product.id,
       name: product.name,
-      price,
+      price: unitPrice,
       qty: quantity,
       size: selectedSize,
       back_print: backPrint ? printName.trim() : null,
@@ -128,9 +159,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             </div>
 
             <div className="product-image-frame">
-              {selectedImage?.src ? (
+              {previewSlots[selectedPreview]?.src ? (
                 <img
-                  src={selectedImage.src}
+                  src={previewSlots[selectedPreview].src}
                   alt={product.name}
                   onError={(event) => {
                     event.currentTarget.style.display = 'none'
@@ -226,11 +257,15 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             <div className="product-option-block">
               <span className="field-label">Miqdor</span>
               <div className="qty-control">
-                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))}>
+                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} disabled={quantity <= 1}>
                   <Minus size={15} />
                 </button>
                 <span>{quantity}</span>
-                <button type="button" onClick={() => setQuantity((value) => value + 1)}>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}
+                  disabled={availableStocks.length > 0 && quantity >= maxQuantity}
+                >
                   <Plus size={15} />
                 </button>
               </div>
@@ -270,6 +305,25 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
             )}
 
+            {notice && <div className="product-notice">{notice}</div>}
+
+            <div className="product-mobile-summary">
+              <div>
+                <span>Tanlov</span>
+                <strong>{selectedSizeLabel} / {quantity} ta</strong>
+              </div>
+              {canCustomize && backPrint && (
+                <div>
+                  <span>Yozuv</span>
+                  <strong>{printName || 'Ism raqam'}</strong>
+                </div>
+              )}
+              <div>
+                <span>Jami</span>
+                <strong>{Math.round(orderTotal).toLocaleString()} so'm</strong>
+              </div>
+            </div>
+
             <div className="product-actions">
               <button className="btn btn-primary" onClick={() => handleAddToCart(false)}>
                 {added ? "Qo'shildi!" : <><ShoppingCart size={17} /> Savatga qo'shish</>}
@@ -296,31 +350,21 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   )
 }
 
-function isFormaProduct(product: Product) {
-  const source = product as unknown as Record<string, unknown>
-  const text = [
-    product.name,
-    product.category_name,
-    source.main_category,
-    source.product_type,
-  ].map((value) => String(value ?? '').toLowerCase()).join(' ')
-  return text.includes('forma') || text.includes('jersey') || text.includes('kit')
-}
-
 function buildGalleryImages(product: Product) {
-  const source = product as unknown as Record<string, unknown>
-  const values = [product.photo_url, source.gallery]
-    .flatMap((value) => String(value ?? '').split(','))
-    .map((value) => value.trim())
+  const rawGallery = (product.gallery || '')
+    .split(',')
+    .map((item) => item.trim())
     .filter(Boolean)
+  const values = [product.photo_url, ...rawGallery].filter(Boolean) as string[]
+  const unique = Array.from(new Set(values))
 
-  return Array.from(new Set(values)).map((value, index) => ({
+  return unique.map((value, index) => ({
     label: index === 0 ? 'Asosiy' : `Rasm ${index + 1}`,
     src: toPhotoSrc(value),
   }))
 }
 
 function toPhotoSrc(value: string) {
-  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/')) return value
+  if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value
   return `/api/photo?file_id=${encodeURIComponent(value)}`
 }
