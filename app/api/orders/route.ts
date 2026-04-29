@@ -4,41 +4,41 @@ import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
-const BOT_TOKEN      = process.env.BOT_TOKEN!
-const GROUP_ORDERS   = process.env.GROUP_CHAT_ID    || process.env.GROUP_ORDERS_ID || '-5194049252'
-const ADMIN_ID       = process.env.GLAVNIY_ADMIN_ID || '8156792282'
-
-// ─── Telegram helpers ─────────────────────────────────────────────────────────
+const BOT_TOKEN = process.env.BOT_TOKEN!
+const GROUP_ORDERS = process.env.GROUP_CHAT_ID || process.env.GROUP_ORDERS_ID || '-5194049252'
+const ADMIN_ID = process.env.GLAVNIY_ADMIN_ID || '8156792282'
+const CARD_PAYMENT = "9860340101082121 - Xolbo'tayev Bobur"
 
 function orderActionsKeyboard(orderId: number) {
   return {
     inline_keyboard: [[
-      { text: '✅ Tasdiqlash',    callback_data: `admin_confirm_${orderId}` },
-      { text: '❌ Bekor qilish', callback_data: `admin_cancel_${orderId}` },
+      { text: 'Tasdiqlash', callback_data: `admin_confirm_${orderId}` },
+      { text: 'Bekor qilish', callback_data: `admin_cancel_${orderId}` },
     ]],
   }
 }
 
-async function sendTelegramMessage(
-  chatId: string,
-  text: string,
-  orderId: number,
-  photo?: string
-): Promise<boolean> {
+function canSendTelegramPhoto(photo?: string) {
+  if (!photo) return false
+  return !photo.startsWith('/')
+}
+
+async function sendTelegramMessage(chatId: string, text: string, orderId: number, photo?: string): Promise<boolean> {
   if (!BOT_TOKEN) return false
   const base = `https://api.telegram.org/bot${BOT_TOKEN}`
   const reply_markup = orderActionsKeyboard(orderId)
 
   try {
-    if (photo) {
-      const caption = text.length > 1024 ? text.slice(0, 1020) + '…' : text
+    if (photo && canSendTelegramPhoto(photo)) {
+      const caption = text.length > 1024 ? text.slice(0, 1020) + '...' : text
       const res = await fetch(`${base}/sendPhoto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, photo, caption, parse_mode: 'HTML', reply_markup }),
       })
-      return res.ok
+      if (res.ok) return true
     }
+
     const res = await fetch(`${base}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,38 +50,34 @@ async function sendTelegramMessage(
   }
 }
 
-// GROUP_CHAT_ID ni formatlar: "-5194049252", "5194049252", "100..." hammasini sinash
 function chatCandidates(raw: string): string[] {
   const set = new Set<string>()
-  for (const v of raw.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean)) {
-    set.add(v)
-    if (/^\d+$/.test(v)) {
-      set.add(`-${v}`)
-      set.add(`-100${v}`)
+  for (const value of raw.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean)) {
+    set.add(value)
+    if (/^\d+$/.test(value)) {
+      set.add(`-${value}`)
+      set.add(`-100${value}`)
     }
-    if (/^-\d+$/.test(v) && !v.startsWith('-100')) {
-      set.add(`-100${v.slice(1)}`)
+    if (/^-\d+$/.test(value) && !value.startsWith('-100')) {
+      set.add(`-100${value.slice(1)}`)
     }
   }
   return [...set]
 }
-
-// ─── POST /api/orders ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { customer_name, customer_phone, address, payment_type, items, total } = body
 
-    // Validation
     if (!customer_name?.trim()) {
-      return NextResponse.json({ error: "Ism kiritilmagan" }, { status: 400 })
+      return NextResponse.json({ error: 'Ism kiritilmagan' }, { status: 400 })
     }
     if (!customer_phone?.trim()) {
-      return NextResponse.json({ error: "Telefon raqami kiritilmagan" }, { status: 400 })
+      return NextResponse.json({ error: 'Telefon raqami kiritilmagan' }, { status: 400 })
     }
     if (!address?.trim()) {
-      return NextResponse.json({ error: "Manzil kiritilmagan" }, { status: 400 })
+      return NextResponse.json({ error: 'Manzil kiritilmagan' }, { status: 400 })
     }
     if (!['card', 'credit'].includes(payment_type)) {
       return NextResponse.json({ error: "To'lov turi noto'g'ri" }, { status: 400 })
@@ -95,7 +91,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // DB: order yaratish
     const orderId = await createOrder({
       customer_name: customer_name.trim(),
       customer_phone: customer_phone.trim(),
@@ -105,51 +100,53 @@ export async function POST(req: NextRequest) {
       total,
     })
 
-    // Telegram xabari matni
-    const paymentLabel = payment_type === 'card' ? '💳 Karta / Paynet' : '🤝 Uzum Nasiya'
-    const nasiyaNote   = payment_type === 'credit' ? '\n⚠️ <b>UZUM NASIYA — aloqaga chiqing!</b>' : ''
+    const paymentLabel = payment_type === 'card'
+      ? `Paynet / karta: ${CARD_PAYMENT}`
+      : 'Uzum Nasiya'
+    const nasiyaNote = payment_type === 'credit' ? '\n<b>UZUM NASIYA - mijoz bilan boglaning.</b>' : ''
 
     let cartLines = ''
     let firstPhoto: string | undefined
 
     for (const item of items) {
       const extra = [
-        item.size       ? `(${item.size})`       : '',
-        item.back_print ? `✍️ ${item.back_print}` : '',
+        item.size ? `Razmeri: ${item.size}` : '',
+        item.back_print ? `Yozilishi: ${item.back_print}` : '',
       ].filter(Boolean).join(' | ')
 
-      cartLines += `• ${item.name}${extra ? ' ' + extra : ''} × ${item.qty} = ${(item.price * item.qty).toLocaleString()} so'm\n`
+      cartLines += `- ${item.name}${extra ? ' | ' + extra : ''} x ${item.qty} = ${(item.price * item.qty).toLocaleString()} so'm\n`
       if (!firstPhoto && item.photo_url) firstPhoto = item.photo_url
     }
 
     const adminText =
-      `🌐 <b>SAYTDAN BUYURTMA #${orderId}</b>${nasiyaNote}\n` +
-      `${'─'.repeat(28)}\n` +
-      `👤 ${customer_name}\n` +
-      `📱 ${customer_phone}\n` +
-      `${'─'.repeat(28)}\n` +
-      `📍 ${address}\n` +
-      `💳 ${paymentLabel}\n` +
-      `${'─'.repeat(28)}\n` +
+      `<b>SAYTDAN BUYURTMA #${orderId}</b>${nasiyaNote}\n` +
+      `${'-'.repeat(28)}\n` +
+      `Ism: ${customer_name.trim()}\n` +
+      `Tel: ${customer_phone.trim()}\n` +
+      `Dastavka: ${address.trim()}\n` +
+      `Tolov: ${paymentLabel}\n` +
+      `${'-'.repeat(28)}\n` +
       cartLines +
-      `${'─'.repeat(28)}\n` +
-      `💰 <b>JAMI: ${total.toLocaleString()} so'm</b>`
+      `${'-'.repeat(28)}\n` +
+      `<b>JAMI: ${Number(total).toLocaleString()} so'm</b>`
 
-    // Guruhga yuborish
     const candidates = chatCandidates(GROUP_ORDERS)
     let groupOk = false
     for (const chatId of candidates) {
       const ok = await sendTelegramMessage(chatId, adminText, orderId, firstPhoto)
-      if (ok) { groupOk = true; break }
+      if (ok) {
+        groupOk = true
+        break
+      }
     }
 
     if (!groupOk) {
       await notifyAdminError('Order group notify failed', new Error('All chat candidates failed'), {
-        GROUP_ORDERS, order_id: orderId,
+        GROUP_ORDERS,
+        order_id: orderId,
       })
     }
 
-    // Glavniy adminga ham yuborish
     let adminOk = false
     if (ADMIN_ID) {
       adminOk = await sendTelegramMessage(ADMIN_ID, adminText, orderId, firstPhoto)
