@@ -21,9 +21,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
   const hasDiscount = product.discount_percent > 0
   const customizationStatus = product.customization_status ?? 'not_available'
-  const isForma = `${product.category_name || ''} ${product.name} ${product.main_category || ''} ${product.product_type || ''}`
-    .toLowerCase()
-    .includes('forma')
+  const isForma = isFormaProduct(product)
   const canCustomize = product.is_customizable || customizationStatus !== 'not_available' || isForma
   const customizationPrice = customizationStatus === 'included_bonus' ? 0 : Number(product.customization_price ?? 50000)
   const stocks = product.stocks ?? []
@@ -350,12 +348,20 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   )
 }
 
+function isFormaProduct(product: Product) {
+  const source = product as unknown as Record<string, unknown>
+  const text = [product.name, product.category_name, source.main_category, source.product_type]
+    .map((value) => String(value ?? '').toLowerCase())
+    .join(' ')
+  return text.includes('forma') || text.includes('jersey') || text.includes('kit')
+}
+
 function buildGalleryImages(product: Product) {
-  const rawGallery = (product.gallery || '')
-    .split(',')
+  const source = product as unknown as Record<string, unknown>
+  const values = [product.photo_url, source.gallery]
+    .flatMap((value) => String(value ?? '').split(','))
     .map((item) => item.trim())
     .filter(Boolean)
-  const values = [product.photo_url, ...rawGallery].filter(Boolean) as string[]
   const unique = Array.from(new Set(values))
 
   return unique.map((value, index) => ({
