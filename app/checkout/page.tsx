@@ -10,9 +10,12 @@ import { trackEvent } from '@/lib/analytics'
 
 const PAYNET_LINK =
   "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
+const CARD_PAYMENT = "9860340101082121 - Xolbo'tayev Bobur"
+const MAX_CHECK_SIZE = 10 * 1024 * 1024
 
 type Step = 'info' | 'payment' | 'success'
 type PaymentType = 'card' | 'credit'
+type DeliveryZone = 'tashkent' | 'region'
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart()
@@ -26,13 +29,20 @@ export default function CheckoutPage() {
   const [checkMessage, setCheckMessage] = useState('')
   const [submittedItems, setSubmittedItems] = useState<CartItem[]>([])
   const [submittedTotal, setSubmittedTotal] = useState(0)
-  const [form, setForm] = useState({ name: '', phone: '', address: '', paymentType: '' as PaymentType | '' })
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    deliveryZone: '' as DeliveryZone | '',
+    address: '',
+    paymentType: '' as PaymentType | '',
+  })
 
   const updateForm = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }))
+  const fullAddress = () => `${form.deliveryZone === 'tashkent' ? 'Toshkent shahar' : 'Viloyat'}: ${form.address}`
 
   const handleInfoSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) {
+    if (!form.name.trim() || !form.phone.trim() || !form.deliveryZone || !form.address.trim()) {
       setError("Barcha maydonlarni to'ldiring!")
       return
     }
@@ -53,7 +63,8 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer_name: form.name,
           customer_phone: form.phone,
-          address: form.address,
+          address: fullAddress(),
+          delivery_zone: form.deliveryZone,
           payment_type: paymentType,
           items: orderItems,
           total: orderTotal,
@@ -84,13 +95,41 @@ export default function CheckoutPage() {
     }
   }
 
+  const validateCheckFile = (file: File) => {
+    const isAllowedType = file.type.startsWith('image/') || file.type === 'application/pdf'
+    if (!isAllowedType) return "Chek rasm yoki PDF formatida bo'lishi kerak."
+    if (file.size > MAX_CHECK_SIZE) return "Chek fayli 10 MB dan kichik bo'lishi kerak."
+    return ''
+  }
+
+  const handleCheckFileChange = (file?: File | null) => {
+    setCheckMessage('')
+    if (!file) {
+      setCheckFile(null)
+      return
+    }
+    const validation = validateCheckFile(file)
+    if (validation) {
+      setCheckFile(null)
+      setCheckMessage(validation)
+      return
+    }
+    setCheckFile(file)
+    setCheckMessage(`${file.name} tanlandi. Endi "Chekni yuborish" tugmasini bosing.`)
+  }
+
   const handleCheckUpload = async () => {
     if (!orderId || !checkFile) {
       setCheckMessage('Iltimos, chek rasmini tanlang')
       return
     }
+    const validation = validateCheckFile(checkFile)
+    if (validation) {
+      setCheckMessage(validation)
+      return
+    }
     setCheckLoading(true)
-    setCheckMessage('')
+    setCheckMessage('Chek Telegram admin kanaliga yuborilmoqda...')
     try {
       const payload = new FormData()
       payload.append('order_id', String(orderId))
@@ -103,7 +142,7 @@ export default function CheckoutPage() {
       if (!res.ok) throw new Error(data.error || 'Chek yuborilmadi')
 
       setCheckFile(null)
-      setCheckMessage('✅ Chek qabul qilindi. Admin tekshiradi.')
+      setCheckMessage('Chek qabul qilindi. Admin tekshiradi.')
       trackEvent('check_uploaded', { order_id: orderId })
     } catch (err: any) {
       trackEvent('checkout_error', { message: err.message, order_id: orderId, type: 'check_upload' })
@@ -116,9 +155,9 @@ export default function CheckoutPage() {
   if (items.length === 0 && step === 'info') {
     return (
       <div style={{ textAlign: 'center', padding: '120px 24px' }}>
-        <div style={{ fontSize: 64, marginBottom: 20 }}>🛒</div>
+        <div style={{ fontSize: 28, marginBottom: 20, fontWeight: 900 }}>Savat bo'sh</div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 32, marginBottom: 12 }}>SAVAT BO'SH</h2>
-        <Link href="/catalog" className="btn btn-primary" style={{ marginTop: 8 }}>Katalogga o'tish →</Link>
+        <Link href="/catalog" className="btn btn-primary" style={{ marginTop: 8 }}>Katalogga o'tish</Link>
       </div>
     )
   }
@@ -146,9 +185,22 @@ export default function CheckoutPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
               <Field label="To'liq ism *"><input className="input" placeholder="Masalan: Musurmon Husanov" value={form.name} onChange={(e) => updateForm('name', e.target.value)} required /></Field>
               <Field label="Telefon *"><input className="input" placeholder="+998 93 107 13 08" type="tel" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} required /></Field>
-              <Field label="Yetkazish manzili *"><textarea className="input" placeholder="Viloyat, tuman, aniq manzil&#10;Masalan: Samarqand viloyati, Tayloq tumani, Musurmon" value={form.address} onChange={(e) => updateForm('address', e.target.value)} rows={3} required style={{ resize: 'vertical' }} /></Field>
+              <Field label="Yetkazish hududi *">
+                <div className="delivery-zone-grid">
+                  <button type="button" className={form.deliveryZone === 'tashkent' ? 'delivery-zone active' : 'delivery-zone'} onClick={() => updateForm('deliveryZone', 'tashkent')}>
+                    Toshkent shahar
+                    <span>Yandex orqali yetkazish</span>
+                  </button>
+                  <button type="button" className={form.deliveryZone === 'region' ? 'delivery-zone active' : 'delivery-zone'} onClick={() => updateForm('deliveryZone', 'region')}>
+                    Viloyatlar
+                    <span>Pochta/kuryer orqali</span>
+                  </button>
+                </div>
+              </Field>
+              <Field label="Yetkazish manzili *"><textarea className="input" placeholder={form.deliveryZone === 'tashkent' ? "Toshkent shahar, tuman, ko'cha yoki mo'ljal" : "Viloyat, tuman, aniq manzil\nMasalan: Samarqand viloyati, Tayloq tumani"} value={form.address} onChange={(e) => updateForm('address', e.target.value)} rows={3} required style={{ resize: 'vertical' }} /></Field>
+              {form.deliveryZone === 'tashkent' && <div className="delivery-note">Toshkent bo'yicha admin siz bilan bog'lanib, Yandex yetkazish uchun lokatsiyani aniqlashtiradi.</div>}
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: 15 }}>Davom etish →</button>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: 15 }}>Davom etish</button>
           </form>
         )}
 
@@ -157,10 +209,10 @@ export default function CheckoutPage() {
             <Title>TO&apos;LOV USULI</Title>
             <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 32 }}>Qulay to'lov usulini tanlang</p>
             <div className="payment-options">
-              <PaymentButton title="💳 Karta / Paynet" description="To'lov linki yuboriladi. Chek talab qilinadi." icon={<CreditCard size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('card')} />
-              <PaymentButton title="🤝 Uzum Nasiya" description="Admin tez orada siz bilan bog'lanadi" icon={<Handshake size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('credit')} />
+              <PaymentButton title="Karta / Paynet" description="Paynet yoki karta orqali to'lang. Chek talab qilinadi." icon={<CreditCard size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('card')} />
+              <PaymentButton title="Uzum Nasiya" description="Admin tez orada siz bilan bog'lanadi" icon={<Handshake size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('credit')} />
             </div>
-            {loading && <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--muted)', fontSize: 13 }}>⏳ Buyurtma yuborilmoqda...</div>}
+            {loading && <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--muted)', fontSize: 13 }}>Buyurtma yuborilmoqda...</div>}
           </div>
         )}
 
@@ -169,27 +221,34 @@ export default function CheckoutPage() {
             <div className="success-mark"><CheckCircle size={40} color="var(--accent)" /></div>
             <h1 className="success-title">QABUL QILINDI!</h1>
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 8 }}>Buyurtma <strong style={{ color: 'var(--text)' }}>#{orderId}</strong> muvaffaqiyatli yuborildi</p>
-            <OrderSummary items={submittedItems} total={submittedTotal} paymentType={form.paymentType} phone={form.phone} address={form.address} />
+            <OrderSummary items={submittedItems} total={submittedTotal} paymentType={form.paymentType} phone={form.phone} address={fullAddress()} />
 
             {form.paymentType === 'card' ? (
               <div className="success-card">
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>💳 To'lovni amalga oshiring</div>
-                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>Paynet orqali to'lang, keyin chek rasmini shu yerga yuklang</p>
-                <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-primary">💳 Paynet orqali to'lash</a>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}>To'lovni amalga oshiring</div>
+                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>Paynet linki yoki karta raqami orqali to'lang, keyin chekni shu yerga yuklang.</p>
+                <div className="payment-help-grid">
+                  <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-primary">Paynet orqali to'lash</a>
+                  <div className="card-number-box">
+                    <span>Karta orqali to'lov</span>
+                    <strong>{CARD_PAYMENT}</strong>
+                  </div>
+                </div>
                 <div className="check-upload-box">
-                  <label className="check-upload-label">Chek rasmini yuklang<input type="file" accept="image/*,.pdf" onChange={(event) => setCheckFile(event.target.files?.[0] || null)} /></label>
+                  <div className="check-upload-rules">Rasm yoki PDF yuklang. Fayl hajmi 10 MB dan oshmasin.</div>
+                  <label className="check-upload-label">Chek rasmini yuklang<input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => handleCheckFileChange(event.target.files?.[0] || null)} /></label>
                   {checkFile && <div className="check-upload-file">{checkFile.name}</div>}
                   <button type="button" className="btn btn-secondary" disabled={!checkFile || checkLoading} onClick={handleCheckUpload} style={{ width: '100%', marginTop: 12 }}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
                   {checkMessage && <div className="check-upload-message">{checkMessage}</div>}
                 </div>
               </div>
             ) : (
-              <div className="success-card"><div style={{ fontWeight: 600, marginBottom: 8 }}>🤝 Uzum Nasiya</div><p style={{ color: 'var(--muted)', fontSize: 13 }}>Admin tez orada siz bilan bog'lanib, nasiya shartlarini tushuntiradi</p></div>
+              <div className="success-card"><div style={{ fontWeight: 600, marginBottom: 8 }}>Uzum Nasiya</div><p style={{ color: 'var(--muted)', fontSize: 13 }}>Admin tez orada siz bilan bog'lanib, nasiya shartlarini tushuntiradi.</p></div>
             )}
 
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link href="/catalog" className="btn btn-secondary">Katalogga qaytish</Link>
-              <a href="https://t.me/formachi_admin" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">💬 Admin bilan bog'lanish</a>
+              <a href="https://t.me/formachi_admin" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Admin bilan bog'lanish</a>
             </div>
           </div>
         )}
@@ -204,10 +263,10 @@ function OrderSummary({ items, total, paymentType, phone, address }: { items: Ca
     <div className="order-summary">
       <div className="summary-label">Buyurtma xulosasi</div>
       {items.map((item, index) => (
-        <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ✍️${item.back_print}` : ''} × {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>
+        <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ${item.back_print}` : ''} x {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>
       ))}
-      <div className="summary-meta"><span>📱 {phone}</span><span>{paymentType === 'card' ? '💳 Paynet' : '🤝 Uzum Nasiya'}</span></div>
-      <div className="summary-address">📍 {address}</div>
+      <div className="summary-meta"><span>Tel: {phone}</span><span>{paymentType === 'card' ? 'Paynet / karta' : 'Uzum Nasiya'}</span></div>
+      <div className="summary-address">Manzil: {address}</div>
       <div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div>
     </div>
   )
@@ -231,7 +290,7 @@ function Steps({ current }: { current: Step }) {
   })}</div>
 }
 function CartSummary({ items, total }: { items: CartItem[]; total: number }) {
-  return <div className="summary-card"><div className="summary-label">Savatingiz</div>{items.map((item, index) => <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ✍️${item.back_print}` : ''} × {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>)}<div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div></div>
+  return <div className="summary-card"><div className="summary-label">Savatingiz</div>{items.map((item, index) => <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ${item.back_print}` : ''} x {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>)}<div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div></div>
 }
 function PaymentButton({ title, description, icon, loading, onClick }: { title: string; description: string; icon: React.ReactNode; loading: boolean; onClick: () => void }) {
   return <button disabled={loading} onClick={onClick} className="payment-option"><div className="payment-option-inner"><div className="payment-icon">{icon}</div><div className="payment-copy"><div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{title}</div><div style={{ fontSize: 12, color: 'var(--muted)' }}>{description}</div></div></div></button>
