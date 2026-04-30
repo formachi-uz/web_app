@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
 import CartAnalytics from '@/components/CartAnalytics'
+import TelegramWebAppFix from '@/components/TelegramWebAppFix'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="uz">
       <body className="noise">
+        <TelegramWebAppFix />
         <Navbar />
         <main className="site-main">{children}</main>
         <Footer />
