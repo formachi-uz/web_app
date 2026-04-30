@@ -44,35 +44,38 @@ export default function CartDrawer() {
             </div>
           ) : (
             <div className="cart-items">
-              {items.map((item, index) => (
-                <div key={`${item.product_id}-${item.size}-${index}`} className="cart-item">
-                  <div className="cart-item-image">
-                    {item.photo_url ? <img src={`/api/photo?file_id=${item.photo_url}`} alt={item.name} /> : <span>FM</span>}
-                  </div>
-                  <div className="cart-item-info">
-                    <strong>{item.name}</strong>
-                    <small>
-                      {item.size && `O'lcham: ${item.size}`}
-                      {item.back_print && ` | ${item.back_print}`}
-                    </small>
-                    <div className="cart-item-bottom">
-                      <span>{(item.price * item.qty).toLocaleString()} so'm</span>
-                      <div className="cart-qty">
-                        <button type="button" onClick={() => updateQty(index, item.qty - 1)} aria-label="Kamaytirish">
-                          <Minus size={13} />
-                        </button>
-                        <em>{item.qty}</em>
-                        <button type="button" onClick={() => updateQty(index, item.qty + 1)} aria-label="Ko'paytirish">
-                          <Plus size={13} />
-                        </button>
+              {items.map((item, index) => {
+                const imageSrc = toPhotoSrc(item.photo_url)
+                return (
+                  <div key={`${item.product_id}-${item.size}-${index}`} className="cart-item">
+                    <div className="cart-item-image">
+                      {imageSrc ? <img src={imageSrc} alt={item.name} /> : <span>FM</span>}
+                    </div>
+                    <div className="cart-item-info">
+                      <strong>{item.name}</strong>
+                      <small>
+                        {item.size && `O'lcham: ${item.size}`}
+                        {item.back_print && ` | ${item.back_print}`}
+                      </small>
+                      <div className="cart-item-bottom">
+                        <span>{(item.price * item.qty).toLocaleString()} so'm</span>
+                        <div className="cart-qty">
+                          <button type="button" onClick={() => updateQty(index, item.qty - 1)} aria-label="Kamaytirish">
+                            <Minus size={13} />
+                          </button>
+                          <em>{item.qty}</em>
+                          <button type="button" onClick={() => updateQty(index, item.qty + 1)} aria-label="Ko'paytirish">
+                            <Plus size={13} />
+                          </button>
+                        </div>
                       </div>
                     </div>
+                    <button type="button" className="cart-remove" onClick={() => removeItem(index)} aria-label="O'chirish">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <button type="button" className="cart-remove" onClick={() => removeItem(index)} aria-label="O'chirish">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -91,4 +94,10 @@ export default function CartDrawer() {
       </aside>
     </>
   )
+}
+
+function toPhotoSrc(value?: string | null) {
+  if (!value) return null
+  if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value
+  return `/api/photo?file_id=${encodeURIComponent(value)}`
 }
