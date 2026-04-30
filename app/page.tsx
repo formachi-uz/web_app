@@ -2,70 +2,18 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Send, ShieldCheck, Shirt, Truck } from 'lucide-react'
 import { getProducts, getReviews, Product } from '@/lib/db'
+import { teamFilters } from '@/lib/team-data'
 import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 60
 
-const teams = [
-  {
-    name: 'Real Madrid',
-    query: 'Real Madrid',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg',
-  },
-  {
-    name: 'Barcelona',
-    query: 'Barcelona',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg',
-  },
-  {
-    name: 'Manchester City',
-    query: 'Manchester City',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
-  },
-  {
-    name: 'Chelsea',
-    query: 'Chelsea',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
-  },
-  {
-    name: 'Liverpool',
-    query: 'Liverpool',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
-  },
-  {
-    name: 'Bayern Munich',
-    query: 'Bayern Munich',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/FC_Bayern_Munich_logo_%282017%29.svg',
-  },
-  {
-    name: 'PSG',
-    query: 'PSG',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg',
-  },
-  {
-    name: 'Argentina',
-    query: 'Argentina',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/c/c1/Argentina_national_football_team_logo.svg',
-  },
-  {
-    name: 'Brazil',
-    query: 'Brazil',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/0/05/Brazilian_Football_Confederation_logo.svg',
-  },
-  {
-    name: 'Uzbekistan',
-    query: 'Uzbekistan',
-    logo: 'https://upload.wikimedia.org/wikipedia/en/7/77/Uzbekistan_Football_Association_logo.svg',
-  },
-]
-
 export default async function HomePage() {
   const [products, reviews] = await Promise.all([getProducts(), getReviews()])
 
-  const formalar = products.filter(isFormaProduct).slice(0, 8)
-  const retroFormalar = products.filter(isRetroProduct).slice(0, 8)
-  const butsiylar = products.filter(isBootProduct).slice(0, 8)
-  const fallback = products.slice(0, 8)
+  const formalar = products.filter(isFormaProduct).slice(0, 10)
+  const retroFormalar = products.filter(isRetroProduct).slice(0, 10)
+  const butsiylar = products.filter(isBootProduct).slice(0, 10)
+  const fallback = products.slice(0, 10)
 
   const topFormaCount = formalar.length || fallback.length
   const bootCount = butsiylar.length || fallback.length
@@ -82,14 +30,14 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PromoCard
             href="/catalog?mainCategory=FORMLAR"
-            image="/images/premium-jersey-promo.svg"
+            image="/images/premium-jersey-promo.jpg"
             eyebrow="Yangi kolleksiya"
             title="Top Formalar"
             text={`${topFormaCount} ta premium forma va ism yozish xizmati`}
           />
           <PromoCard
             href="/catalog?mainCategory=BUTSIYLAR"
-            image="/images/premium-boot-promo.svg"
+            image="/images/premium-boot-promo.jpg"
             eyebrow="Professional tanlov"
             title="Premium Butsiylar"
             text={`${bootCount} ta tezlik va nazorat uchun tanlov`}
@@ -100,7 +48,7 @@ export default async function HomePage() {
       <section id="teams" className="container mx-auto px-4 py-8">
         <SectionHead eyebrow="Jamoalar" title="Jamoangizni tanlang" href="/catalog" />
         <div className="team-logo-scroll mt-6" aria-label="Jamoalar bo'yicha tezkor filter">
-          {teams.map((team) => (
+          {teamFilters.map((team) => (
             <Link key={team.name} href={`/catalog?team=${encodeURIComponent(team.query)}`} className="team-logo-card">
               <span>
                 <img src={team.logo} alt={team.name} />
@@ -175,7 +123,7 @@ function CategoryProductSection({ title, text, href, products }: { title: string
       </div>
       {products.length > 0 ? (
         <div className="category-product-grid">
-          {products.slice(0, 4).map((product) => (
+          {products.slice(0, 10).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
