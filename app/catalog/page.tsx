@@ -1,22 +1,10 @@
 import { getCategories, getProducts } from '@/lib/db'
+import { teamFilters } from '@/lib/team-data'
 import CatalogSearch from '@/components/CatalogSearch'
 import Link from 'next/link'
 import { Home } from 'lucide-react'
 
 export const revalidate = 60
-
-const quickTeams = [
-  { name: 'Real Madrid', logo: 'https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg' },
-  { name: 'Barcelona', logo: 'https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg' },
-  { name: 'Manchester City', logo: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg' },
-  { name: 'Chelsea', logo: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg' },
-  { name: 'Liverpool', logo: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg' },
-  { name: 'Bayern Munich', logo: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/FC_Bayern_Muenchen_logo_%282017%29.svg' },
-  { name: 'PSG', logo: 'https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' },
-  { name: 'Argentina', logo: 'https://upload.wikimedia.org/wikipedia/en/c/c1/Argentina_national_football_team_logo.svg' },
-  { name: 'Brazil', logo: 'https://upload.wikimedia.org/wikipedia/en/0/05/Flag_of_Brazil.svg' },
-  { name: 'Uzbekistan', logo: 'https://upload.wikimedia.org/wikipedia/commons/8/84/Uzbekistan_Football_Association.svg' },
-]
 
 const quickBrands = ['Nike', 'Adidas', 'Puma', 'Mizuno', 'New Balance']
 
@@ -65,12 +53,12 @@ export default async function CatalogPage({
   }
   const titleLabel = activeCategory
     ? `${activeCategory.emoji} ${activeCategory.name}`
-    : mainCategory
-      ? mainCategoryLabels[mainCategory] ?? mainCategory
-      : team
-        ? `Jamoa: ${team}`
-        : brand
-          ? `Brend: ${brand}`
+    : team
+      ? `Jamoa: ${team}`
+      : brand
+        ? `Brend: ${brand}`
+        : mainCategory
+          ? mainCategoryLabels[mainCategory] ?? mainCategory
           : 'Barcha mahsulotlar'
 
   const preserveQuery = new URLSearchParams()
@@ -142,8 +130,8 @@ export default async function CatalogPage({
               {team && <Link href={makeQuickHref('team')}>Tozalash</Link>}
             </div>
             <div className="quick-team-row">
-              {quickTeams.map((item) => (
-                <Link key={item.name} href={makeQuickHref('team', item.name)} className={team === item.name ? 'quick-team active' : 'quick-team'}>
+              {teamFilters.map((item) => (
+                <Link key={item.name} href={makeQuickHref('team', item.query)} className={team === item.query ? 'quick-team active' : 'quick-team'}>
                   <span><img src={item.logo} alt={item.name} /></span>
                   <strong>{item.name}</strong>
                 </Link>
