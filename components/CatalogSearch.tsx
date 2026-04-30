@@ -6,6 +6,8 @@ import ProductCard from '@/components/ProductCard'
 import { Product } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
 
+type SortMode = 'new' | 'cheap' | 'expensive'
+
 export default function CatalogSearch({
   products,
   initialQuery = '',
@@ -14,6 +16,8 @@ export default function CatalogSearch({
   initialQuery?: string
 }) {
   const [query, setQuery] = useState(initialQuery)
+  const [sortMode, setSortMode] = useState<SortMode>('new')
+  const [stockOnly, setStockOnly] = useState(false)
   const normalizedQuery = normalize(query)
 
   useEffect(() => {
@@ -21,8 +25,13 @@ export default function CatalogSearch({
   }, [initialQuery])
 
   const filteredProducts = useMemo(() => {
-    if (!normalizedQuery) return products
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
+      if (stockOnly) {
+        const totalStock = (product.stocks ?? []).reduce((sum, stock) => sum + (stock.available ?? stock.quantity), 0)
+        if (totalStock <= 0) return false
+      }
+
+      if (!normalizedQuery) return true
       const sizes = (product.stocks ?? []).map((stock) => stock.size).join(' ')
       const haystack = normalize(
         [
@@ -40,7 +49,13 @@ export default function CatalogSearch({
 
       return haystack.includes(normalizedQuery)
     })
-  }, [normalizedQuery, products])
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === 'cheap') return a.final_price - b.final_price
+      if (sortMode === 'expensive') return b.final_price - a.final_price
+      return b.id - a.id
+    })
+  }, [normalizedQuery, products, sortMode, stockOnly])
 
   useEffect(() => {
     if (normalizedQuery.length < 2) return
@@ -73,6 +88,13 @@ export default function CatalogSearch({
         <div className="catalog-count">
           {filteredProducts.length} / {products.length}
         </div>
+      </div>
+
+      <div className="catalog-sort-row" aria-label="Katalog tartiblash">
+        <button type="button" className={sortMode === 'new' ? 'active' : ''} onClick={() => setSortMode('new')}>Yangi</button>
+        <button type="button" className={sortMode === 'cheap' ? 'active' : ''} onClick={() => setSortMode('cheap')}>Arzon</button>
+        <button type="button" className={sortMode === 'expensive' ? 'active' : ''} onClick={() => setSortMode('expensive')}>Qimmat</button>
+        <button type="button" className={stockOnly ? 'active' : ''} onClick={() => setStockOnly((value) => !value)}>Sotuvda bor</button>
       </div>
 
       {filteredProducts.length === 0 ? (
