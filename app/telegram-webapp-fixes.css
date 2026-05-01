@@ -1,0 +1,103 @@
+/* Final mobile overrides for Telegram WebApp viewport. */
+@media (max-width: 520px) {
+  .store-home {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    overflow-x: hidden !important;
+  }
+
+  .home-category-stack,
+  .category-product-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .category-product-section {
+    padding: 12px !important;
+    border-radius: 15px !important;
+  }
+
+  .category-product-head {
+    margin-bottom: 12px !important;
+  }
+
+  .category-product-head h3 {
+    font-size: 25px !important;
+    line-height: 1 !important;
+  }
+
+  .category-product-head p {
+    max-width: 100% !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  .category-product-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 12px !important;
+    margin: 0 !important;
+    padding: 0 0 8px !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+    scroll-padding-left: 0 !important;
+  }
+
+  .category-product-grid .shop-product-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: none !important;
+    margin: 0 !important;
+    scroll-snap-align: none !important;
+  }
+
+  .category-product-grid .shop-product-image {
+    aspect-ratio: 16 / 11 !important;
+    min-height: 176px !important;
+  }
+
+  .category-product-grid .shop-product-image img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    padding: 12px !important;
+  }
+
+  .category-product-grid .shop-product-body {
+    padding: 12px !important;
+  }
+
+  .category-product-grid .shop-product-body h3 {
+    min-height: auto !important;
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+  }
+
+  .category-product-grid .shop-product-footer strong {
+    font-size: 20px !important;
+  }
+
+  .category-product-grid .shop-card-action {
+    padding: 0 12px 12px !important;
+  }
+
+  .category-product-grid .shop-order-btn {
+    min-height: 42px !important;
+    margin-top: 10px !important;
+  }
+
+  .category-product-grid .card-size-row span:nth-child(n+6) {
+    display: none !important;
+  }
+
+  .mobile-bottom-nav {
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
