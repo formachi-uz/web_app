@@ -157,20 +157,57 @@ function SectionHead({ eyebrow, title, href }: { eyebrow: string; title: string;
   )
 }
 
-function textOf(product: Product, keys: string[]) {
+function valueOf(product: Product, key: string) {
   const source = product as unknown as Record<string, unknown>
-  return keys.map((key) => String(source[key] ?? '')).join(' ').toLowerCase()
+  return String(source[key] ?? '')
+}
+
+function textOf(product: Product, keys: string[]) {
+  return keys.map((key) => valueOf(product, key)).join(' ').toLowerCase()
 }
 
 function isRetroProduct(product: Product) {
-  return textOf(product, ['main_category', 'product_type', 'category_name', 'name']).includes('retro')
+  const mainCategory = valueOf(product, 'main_category').toUpperCase()
+  if (mainCategory === 'RETRO_FORMALAR') return true
+
+  const text = textOf(product, ['main_category', 'product_type', 'category_name', 'name'])
+  return text.includes('retro') || text.includes('classic') || text.includes('vintage')
 }
 
 function isBootProduct(product: Product) {
+  const mainCategory = valueOf(product, 'main_category').toUpperCase()
+  const productType = valueOf(product, 'product_type').toLowerCase()
+  if (mainCategory === 'BUTSIYLAR') return true
+  if (['boots', 'boot', 'socks', 'accessory'].includes(productType)) return true
+
   const text = textOf(product, ['main_category', 'product_type', 'category_name', 'brand', 'model', 'name'])
-  return text.includes('butsi') || text.includes('boot') || text.includes('puma') || text.includes('nike') || text.includes('adidas')
+  return [
+    'butsa',
+    'butsi',
+    'buts',
+    'boot',
+    'sarakan',
+    'sarakanosh',
+    'sorokon',
+    'poyabzal',
+    'magista',
+    'mercurial',
+    'predator',
+    'phantom',
+    'speedportal',
+    'f50',
+    'puma',
+    'nike',
+    'adidas',
+    'mizuno',
+    'new balance',
+  ].some((word) => text.includes(word))
 }
 
 function isFormaProduct(product: Product) {
+  const mainCategory = valueOf(product, 'main_category').toUpperCase()
+  if (mainCategory === 'FORMLAR') return true
+  if (mainCategory === 'RETRO_FORMALAR' || mainCategory === 'BUTSIYLAR') return false
+
   return !isBootProduct(product) && !isRetroProduct(product)
 }
