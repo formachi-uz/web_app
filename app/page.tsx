@@ -3,17 +3,17 @@ import type { ReactNode } from 'react'
 import { Send, ShieldCheck, Shirt, Truck } from 'lucide-react'
 import { getProducts, getReviews, Product } from '@/lib/db'
 import { teamFilters } from '@/lib/team-data'
-import ProductCard from '@/components/ProductCard'
+import HomeCategoryProductSection from '@/components/HomeCategoryProductSection'
 
 export const revalidate = 60
 
 export default async function HomePage() {
   const [products, reviews] = await Promise.all([getProducts(), getReviews()])
 
-  const formalar = products.filter(isFormaProduct).slice(0, 10)
-  const retroFormalar = products.filter(isRetroProduct).slice(0, 10)
-  const butsiylar = products.filter(isBootProduct).slice(0, 10)
-  const fallback = products.slice(0, 10)
+  const formalar = products.filter(isFormaProduct).slice(0, 12)
+  const retroFormalar = products.filter(isRetroProduct).slice(0, 12)
+  const butsiylar = products.filter(isBootProduct).slice(0, 12)
+  const fallback = products.slice(0, 12)
 
   const topFormaCount = formalar.length || fallback.length
   const bootCount = butsiylar.length || fallback.length
@@ -62,19 +62,19 @@ export default async function HomePage() {
       <section id="catalog" className="container mx-auto px-4 py-8">
         <SectionHead eyebrow="Katalog" title="3 asosiy bo'lim" href="/catalog" />
         <div className="home-category-stack mt-6">
-          <CategoryProductSection
+          <HomeCategoryProductSection
             title="Formlar"
             text="Klub va milliy jamoalar. Ism va raqam yozish xizmati mavjud."
             href="/catalog?mainCategory=FORMLAR"
             products={formalar.length ? formalar : fallback}
           />
-          <CategoryProductSection
+          <HomeCategoryProductSection
             title="Retro formalar"
             text="Klassik, vintage va trenddagi eski mavsum formalari."
             href="/catalog?mainCategory=RETRO_FORMALAR"
             products={retroFormalar}
           />
-          <CategoryProductSection
+          <HomeCategoryProductSection
             title="Butsiylar"
             text="Nike, Adidas, Puma va boshqa premium futbol butsiylari."
             href="/catalog?mainCategory=BUTSIYLAR"
@@ -108,29 +108,6 @@ function PromoCard({ href, image, eyebrow, title, text }: { href: string; image:
         <p className="text-gray-300 text-sm md:text-base">{text}</p>
       </div>
     </Link>
-  )
-}
-
-function CategoryProductSection({ title, text, href, products }: { title: string; text: string; href: string; products: Product[] }) {
-  return (
-    <div className="category-product-section">
-      <div className="category-product-head">
-        <div>
-          <h3>{title}</h3>
-          <p>{text}</p>
-        </div>
-        <Link href={href}>Ko'rish</Link>
-      </div>
-      {products.length > 0 ? (
-        <div className="category-product-grid">
-          {products.slice(0, 10).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      ) : (
-        <div className="category-empty">Bu bo'limga mahsulot qo'shilganda shu yerda ko'rinadi.</div>
-      )}
-    </div>
   )
 }
 
