@@ -12,6 +12,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const [quickOpen, setQuickOpen] = useState(false)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [qty, setQty] = useState(1)
+  const [imageFailed, setImageFailed] = useState(false)
   const addItem = useCart((s) => s.addItem)
   const router = useRouter()
 
@@ -23,6 +24,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const availableSizes = availableStocks.map((stock) => stock.size)
   const rating = Math.max(1, Math.round(product.avg_rating || 5))
   const imageSrc = toPhotoSrc(product.photo_url)
+  const showImage = Boolean(imageSrc && !imageFailed)
   const selectedStock = selectedSize ? availableStocks.find((stock) => stock.size === selectedSize) : availableStocks[0]
   const maxQty = Math.max(1, selectedStock ? (selectedStock.available ?? selectedStock.quantity) : totalStock || 1)
 
@@ -81,21 +83,19 @@ export default function ProductCard({ product }: { product: Product }) {
         }
       >
         <div className="shop-product-image">
-          {imageSrc ? (
+          {showImage ? (
             <img
-              src={imageSrc}
+              src={imageSrc as string}
               alt={product.name}
-              onError={(event) => {
-                event.currentTarget.style.display = 'none'
-              }}
+              onError={() => setImageFailed(true)}
             />
           ) : (
             <div className="shop-product-placeholder">FORMACHI</div>
           )}
 
-          {stockStatus !== 'out' && <span className="shop-stock-pill">Sotuvda bor</span>}
+          {stockStatus === 'ok' && <span className="shop-stock-pill">Sotuvda bor</span>}
+          {stockStatus === 'low' && <span className="shop-stock-pill shop-stock-pill-low">Kam qoldi</span>}
           {hasDiscount && <span className="shop-badge shop-badge-sale">-{Math.round(product.discount_percent)}%</span>}
-          {stockStatus === 'low' && <span className="shop-badge shop-badge-low">Kam qoldi</span>}
           {stockStatus === 'out' && <div className="shop-out">TUGADI</div>}
         </div>
 
@@ -156,7 +156,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
             <div className="quick-order-info">
               <div className="quick-order-thumb">
-                {imageSrc ? <img src={imageSrc} alt={product.name} /> : <span>FM</span>}
+                {showImage ? <img src={imageSrc as string} alt={product.name} /> : <span>FM</span>}
               </div>
               <div>
                 <small>{product.category_name}</small>
