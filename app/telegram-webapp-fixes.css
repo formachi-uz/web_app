@@ -1,4 +1,25 @@
 /* Final mobile overrides for Telegram WebApp viewport. */
+.shop-stock-pill-low {
+  background: linear-gradient(180deg, #ffd86b, #ffbd38) !important;
+  color: #160f02 !important;
+  box-shadow: 0 0 18px rgba(255, 189, 56, .24) !important;
+}
+
+.shop-product-placeholder {
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(57, 255, 136, .18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(57,255,136,.12), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  color: rgba(247, 251, 255, .34);
+  letter-spacing: 0;
+}
+
 @media (max-width: 520px) {
   .store-home {
     padding-bottom: calc(112px + env(safe-area-inset-bottom));
@@ -56,8 +77,10 @@
   }
 
   .category-product-grid .shop-product-image {
-    aspect-ratio: 16 / 11 !important;
-    min-height: 176px !important;
+    aspect-ratio: 16 / 10 !important;
+    min-height: 172px !important;
+    max-height: 226px !important;
+    border-radius: 0 !important;
   }
 
   .category-product-grid .shop-product-image img {
@@ -67,18 +90,64 @@
     padding: 12px !important;
   }
 
+  .category-product-grid .shop-stock-pill,
+  .category-product-grid .shop-badge {
+    top: 10px !important;
+    padding: 6px 9px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+  }
+
+  .category-product-grid .shop-stock-pill {
+    right: 10px !important;
+  }
+
+  .category-product-grid .shop-badge {
+    left: 10px !important;
+  }
+
   .category-product-grid .shop-product-body {
     padding: 12px !important;
   }
 
+  .category-product-grid .shop-product-category {
+    margin-bottom: 6px !important;
+    font-size: 10px !important;
+  }
+
   .category-product-grid .shop-product-body h3 {
     min-height: auto !important;
+    margin-bottom: 8px !important;
     font-size: 15px !important;
     line-height: 1.25 !important;
   }
 
+  .category-product-grid .shop-rating {
+    margin-bottom: 9px !important;
+  }
+
+  .category-product-grid .card-size-row {
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .category-product-grid .card-size-row span {
+    min-width: 30px !important;
+    min-height: 28px !important;
+    font-size: 10px !important;
+  }
+
+  .category-product-grid .card-size-row span:nth-child(n+6) {
+    display: none !important;
+  }
+
   .category-product-grid .shop-product-footer strong {
     font-size: 20px !important;
+    line-height: 1 !important;
+  }
+
+  .category-product-grid .shop-product-footer strong span {
+    font-size: 11px !important;
   }
 
   .category-product-grid .shop-card-action {
@@ -90,14 +159,20 @@
     margin-top: 10px !important;
   }
 
-  .category-product-grid .card-size-row span:nth-child(n+6) {
-    display: none !important;
-  }
-
   .mobile-bottom-nav {
     left: 14px !important;
     right: 14px !important;
     width: auto !important;
     max-width: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .category-product-grid .shop-product-image {
+    min-height: 162px !important;
+  }
+
+  .category-product-grid .shop-product-body h3 {
+    font-size: 14px !important;
   }
 }
