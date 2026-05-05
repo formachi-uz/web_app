@@ -36,9 +36,9 @@ export default function Footer() {
             <Mail size={18} />
             info@formachi.uz
           </a>
-          <a href="tel:+998901234567">
+          <a href="tel:+998949115123">
             <Phone size={18} />
-            +998 90 123 45 67
+            +998 94 911 51 23
           </a>
           <a href="https://t.me/Formachi_uzBot" target="_blank" rel="noopener noreferrer">
             <Send size={18} />
