@@ -96,11 +96,15 @@ export default async function CatalogPage({
       <section className="catalog-hero">
         <div className="container catalog-hero-inner">
           <div className="catalog-hero-content">
-            <Link href="/" className="catalog-home-link">
-              <Home size={15} /> Asosiy menyu
-            </Link>
-            <span className="section-kicker catalog-kicker">{titleLabel}</span>
-            <h1>Katalog</h1>
+            <div className="catalog-hero-navline">
+              <Link href="/" className="catalog-home-link">
+                <Home size={15} /> Asosiy menyu
+              </Link>
+            </div>
+            <div className="catalog-title-block">
+              <h1>Katalog</h1>
+              <span className="catalog-status-chip">{titleLabel}</span>
+            </div>
             <p>
               {query ? `"${query}" bo'yicha ` : ''}
               {products.length} ta mahsulot topildi
