@@ -1,6 +1,7 @@
 import { getCategories, getProducts } from '@/lib/db'
 import { teamFilters } from '@/lib/team-data'
 import CatalogSearch from '@/components/CatalogSearch'
+import TeamFilterCard from '@/components/TeamFilterCard'
 import Link from 'next/link'
 import { Home } from 'lucide-react'
 
@@ -93,55 +94,68 @@ export default async function CatalogPage({
   return (
     <div className="catalog-page">
       <section className="catalog-hero">
-        <div className="container">
-          <Link href="/" className="catalog-home-link">
-            <Home size={16} /> Asosiy menyuga qaytish
-          </Link>
-          <span className="section-kicker" style={{ marginTop: 16 }}>{titleLabel}</span>
-          <h1>Katalog</h1>
-          <p>
-            {query ? `"${query}" bo'yicha ` : ''}
-            {products.length} ta mahsulot topildi
-          </p>
+        <div className="container catalog-hero-inner">
+          <div className="catalog-hero-content">
+            <Link href="/" className="catalog-home-link">
+              <Home size={15} /> Asosiy menyu
+            </Link>
+            <span className="section-kicker catalog-kicker">{titleLabel}</span>
+            <h1>Katalog</h1>
+            <p>
+              {query ? `"${query}" bo'yicha ` : ''}
+              {products.length} ta mahsulot topildi
+            </p>
+          </div>
         </div>
       </section>
 
       <section className="container catalog-shell">
-        <div className="catalog-filter-row" aria-label="Asosiy mahsulot bo'limlari">
-          <Link href="/catalog" className={!categoryId && !mainCategory ? 'active' : ''}>Barchasi</Link>
-          <Link href="/catalog?mainCategory=FORMLAR" className={mainCategory === 'FORMLAR' ? 'active' : ''}>Formlar</Link>
-          <Link href="/catalog?mainCategory=RETRO_FORMALAR" className={mainCategory === 'RETRO_FORMALAR' ? 'active' : ''}>Retro formalar</Link>
-          <Link href="/catalog?mainCategory=BUTSIYLAR" className={mainCategory === 'BUTSIYLAR' ? 'active' : ''}>Butsiylar</Link>
-        </div>
+        <div className="catalog-filter-panel" aria-label="Katalog filterlari">
+          <div className="catalog-filter-group">
+            <span className="catalog-filter-label">Mahsulot turi</span>
+            <div className="catalog-filter-row" aria-label="Asosiy mahsulot bo'limlari">
+              <Link href="/catalog" className={!categoryId && !mainCategory ? 'active' : ''}>Barchasi</Link>
+              <Link href="/catalog?mainCategory=FORMLAR" className={mainCategory === 'FORMLAR' ? 'active' : ''}>Formlar</Link>
+              <Link href="/catalog?mainCategory=RETRO_FORMALAR" className={mainCategory === 'RETRO_FORMALAR' ? 'active' : ''}>Retro</Link>
+              <Link href="/catalog?mainCategory=BUTSIYLAR" className={mainCategory === 'BUTSIYLAR' ? 'active' : ''}>Butsiylar</Link>
+            </div>
+          </div>
 
-        <div className="catalog-filter-row" aria-label="Katalog kategoriyalari">
-          {categories.map((cat) => (
-            <Link key={cat.id} href={makeCategoryHref(cat.id)} className={categoryId === cat.id ? 'active' : ''}>
-              <span>{cat.emoji}</span>
-              {cat.name}
-            </Link>
-          ))}
+          <div className="catalog-filter-group">
+            <span className="catalog-filter-label">Kategoriyalar</span>
+            <div className="catalog-filter-row" aria-label="Katalog kategoriyalari">
+              {categories.map((cat) => (
+                <Link key={cat.id} href={makeCategoryHref(cat.id)} className={categoryId === cat.id ? 'active' : ''}>
+                  <span>{cat.emoji}</span>
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
 
         {showTeamQuickFilter && (
-          <div className="quick-filter-block">
+          <div className="quick-filter-block quick-filter-card">
             <div className="quick-filter-head">
               <span>Jamoalar</span>
               {team && <Link href={makeQuickHref('team')}>Tozalash</Link>}
             </div>
             <div className="quick-team-row">
               {teamFilters.map((item) => (
-                <Link key={item.name} href={makeQuickHref('team', item.query)} className={team === item.query ? 'quick-team active' : 'quick-team'}>
-                  <span><img src={item.logo} alt={item.name} /></span>
-                  <strong>{item.name}</strong>
-                </Link>
+                <TeamFilterCard
+                  key={item.name}
+                  name={item.name}
+                  logo={item.logo}
+                  href={makeQuickHref('team', item.query)}
+                  active={team === item.query}
+                />
               ))}
             </div>
           </div>
         )}
 
         {showBrandQuickFilter && (
-          <div className="quick-filter-block">
+          <div className="quick-filter-block quick-filter-card">
             <div className="quick-filter-head">
               <span>Brendlar</span>
               {brand && <Link href={makeQuickHref('brand')}>Tozalash</Link>}
