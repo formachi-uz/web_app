@@ -23,32 +23,37 @@
 .catalog-hero {
   position: relative;
   overflow: hidden;
-  padding: 26px 0 24px !important;
+  padding: 22px 0 20px !important;
   border-bottom: 1px solid rgba(57, 255, 136, .12) !important;
   background:
-    radial-gradient(circle at 82% 28%, rgba(57,255,136,.18), transparent 22rem),
+    radial-gradient(circle at 86% 30%, rgba(57,255,136,.18), transparent 13rem),
     linear-gradient(135deg, rgba(57,255,136,.08), rgba(3,8,17,.2) 42%, rgba(2,5,11,.92)) !important;
 }
 
 .catalog-hero-inner {
   position: relative;
-  min-height: 188px !important;
+  min-height: 176px !important;
   display: flex !important;
   align-items: center;
 }
 
 .catalog-hero .container::after {
-  right: 18px !important;
-  bottom: -34px !important;
-  width: min(39vw, 210px) !important;
-  opacity: .34 !important;
-  filter: blur(.2px) drop-shadow(0 20px 34px rgba(57,255,136,.18)) !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  width: min(34vw, 170px) !important;
+  aspect-ratio: 1 !important;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 48% 45%, rgba(57,255,136,.28), transparent 44%),
+    radial-gradient(circle at 52% 52%, rgba(215,182,106,.18), transparent 58%) !important;
+  opacity: .75 !important;
+  filter: blur(14px) !important;
 }
 
 .catalog-hero-content {
   position: relative;
   z-index: 1;
-  width: min(66%, 620px);
+  width: min(72%, 620px);
 }
 
 .catalog-home-link {
@@ -62,7 +67,7 @@
 }
 
 .catalog-kicker {
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .catalog-hero h1 {
@@ -144,59 +149,59 @@
 @media (max-width: 520px) {
   .store-home,
   .catalog-page {
-    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    padding-bottom: calc(128px + env(safe-area-inset-bottom));
     overflow-x: hidden !important;
   }
 
   .catalog-hero {
-    padding: 14px 0 12px !important;
+    padding: 12px 0 10px !important;
   }
 
   .catalog-hero-inner {
-    min-height: 176px !important;
+    min-height: 160px !important;
     padding-left: 14px !important;
     padding-right: 14px !important;
   }
 
   .catalog-hero-content {
-    width: 62%;
+    width: 72%;
   }
 
   .catalog-hero .container::after {
-    right: 0 !important;
-    bottom: -18px !important;
-    width: 53vw !important;
-    max-width: 205px !important;
-    opacity: .36 !important;
+    right: -22px !important;
+    bottom: 12px !important;
+    width: 42vw !important;
+    max-width: 164px !important;
+    opacity: .72 !important;
   }
 
   .catalog-home-link {
-    min-height: 32px !important;
-    padding: 0 12px !important;
+    min-height: 31px !important;
+    padding: 0 11px !important;
     font-size: 11px !important;
   }
 
   .catalog-kicker {
-    margin-top: 12px;
-    min-height: 26px !important;
-    padding: 5px 10px !important;
+    margin-top: 10px;
+    min-height: 25px !important;
+    padding: 5px 9px !important;
     font-size: 9px !important;
   }
 
   .catalog-hero h1 {
-    margin-top: 10px !important;
-    font-size: 43px !important;
+    margin-top: 9px !important;
+    font-size: 40px !important;
   }
 
   .catalog-hero p {
-    max-width: 170px;
+    max-width: 190px;
     font-size: 12px !important;
     line-height: 1.35 !important;
   }
 
   .catalog-shell {
     padding-top: 14px !important;
-    padding-bottom: calc(108px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;
   }
 
   .catalog-filter-panel {
@@ -238,9 +243,13 @@
   }
 
   .quick-filter-card {
-    margin: 0 0 14px !important;
-    padding: 12px !important;
+    margin: 0 0 18px !important;
+    padding: 12px 12px 18px !important;
     border-radius: 15px;
+  }
+
+  .quick-filter-card:last-of-type {
+    margin-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
   }
 
   .quick-filter-head {
@@ -255,7 +264,7 @@
   .quick-team-row,
   .quick-brand-row {
     margin: 0 -12px !important;
-    padding: 0 12px 4px !important;
+    padding: 0 12px 6px !important;
     gap: 9px !important;
   }
 
@@ -480,15 +489,15 @@
 
 @media (max-width: 380px) {
   .catalog-hero-content {
-    width: 60%;
+    width: 70%;
   }
 
   .catalog-hero h1 {
-    font-size: 39px !important;
+    font-size: 37px !important;
   }
 
   .catalog-hero .container::after {
-    width: 56vw !important;
+    width: 44vw !important;
   }
 
   .category-product-grid .shop-product-card {
