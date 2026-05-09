@@ -241,6 +241,11 @@
   text-align: left;
 }
 
+.payment-card-paid {
+  border-color: rgba(57,255,136,.55);
+  box-shadow: 0 22px 56px rgba(0,0,0,.28), 0 0 34px rgba(57,255,136,.18);
+}
+
 .payment-card-head {
   display: flex;
   align-items: flex-start;
@@ -373,6 +378,32 @@
   line-height: 1.5;
 }
 
+.payment-upload-success {
+  text-align: center;
+  border-style: solid;
+  border-color: rgba(57,255,136,.55);
+  background: rgba(57,255,136,.08);
+}
+
+.payment-upload-success strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.payment-success-icon {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #031109;
+  background: var(--accent);
+  box-shadow: 0 0 24px rgba(57,255,136,.24);
+}
+
 .payment-upload-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -409,6 +440,10 @@
 
 .payment-expired-note {
   color: var(--warning);
+}
+
+.check-upload-message-success {
+  color: var(--accent);
 }
 
 @media (max-width: 860px) {
