@@ -81,7 +81,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { secr
                 <div className="admin-order-meta">
                   <span>{formatDate(order.created_at)}</span>
                   <span>{order.customer_phone || 'Telefon yoq'}</span>
-                  <span>{order.payment_type || 'To\u2019lov usuli yoq'}</span>
+                  <span>{order.payment_type || "To'lov usuli yoq"}</span>
                 </div>
                 <div className="admin-order-address">{order.address || 'Manzil kiritilmagan'}</div>
                 <div className="admin-order-total">{Number(order.total || 0).toLocaleString()} so'm</div>
@@ -131,7 +131,7 @@ async function getDashboardData(): Promise<DashboardData> {
     const columns = await getTableColumns('orders')
     if (!columns.has('id')) return fallbackData('orders jadvali topilmadi yoki hali tayyor emas.')
 
-    const createdCol = pickColumn(columns, ['created_at', 'createdAt', 'date'])
+    const createdCol = pickColumn(columns, ['created_at', 'date'])
     const totalCol = pickColumn(columns, ['total_price', 'total_amount', 'total'])
     const statusCol = pickColumn(columns, ['status'])
     const paymentCol = pickColumn(columns, ['payment_type', 'payment_method'])
@@ -177,8 +177,8 @@ async function getDashboardData(): Promise<DashboardData> {
     return {
       metrics: [
         { label: 'Bugungi zakazlar', value: Number(s.today_orders || 0), hint: 'Bugun kelgan buyurtmalar' },
-        { label: '7 kunlik zakazlar', value: Number(s.week_orders || 0), hint: 'Oxirgi hafta bo\u2019yicha' },
-        { label: 'To\u2019lov kutilmoqda', value: Number(s.payment_waiting || 0), hint: 'Chek yoki tasdiq kutayotganlar' },
+        { label: '7 kunlik zakazlar', value: Number(s.week_orders || 0), hint: "Oxirgi hafta bo'yicha" },
+        { label: "To'lov kutilmoqda", value: Number(s.payment_waiting || 0), hint: 'Chek yoki tasdiq kutayotganlar' },
         { label: '7 kunlik tushum', value: `${Number(s.week_revenue || 0).toLocaleString()} so'm`, hint: 'Buyurtmalar summasi' },
       ],
       orders: latest.rows.map((row) => ({
@@ -194,7 +194,7 @@ async function getDashboardData(): Promise<DashboardData> {
     }
   } catch (error) {
     console.error('Admin dashboard failed:', error)
-    return fallbackData('Admin ma\u2019lumotlarini olishda xatolik bo\u2019ldi. Bot va sayt ishlashda davom etadi.')
+    return fallbackData("Admin ma'lumotlarini olishda xatolik bo'ldi. Bot va sayt ishlashda davom etadi.")
   }
 }
 
@@ -216,10 +216,10 @@ function fallbackData(error: string): DashboardData {
   return {
     error,
     metrics: [
-      { label: 'Bugungi zakazlar', value: 0, hint: 'Database tayyor bo\u2019lsa chiqadi' },
-      { label: '7 kunlik zakazlar', value: 0, hint: 'Database tayyor bo\u2019lsa chiqadi' },
-      { label: 'To\u2019lov kutilmoqda', value: 0, hint: 'Database tayyor bo\u2019lsa chiqadi' },
-      { label: '7 kunlik tushum', value: "0 so'm", hint: 'Database tayyor bo\u2019lsa chiqadi' },
+      { label: 'Bugungi zakazlar', value: 0, hint: "Database tayyor bo'lsa chiqadi" },
+      { label: '7 kunlik zakazlar', value: 0, hint: "Database tayyor bo'lsa chiqadi" },
+      { label: "To'lov kutilmoqda", value: 0, hint: "Database tayyor bo'lsa chiqadi" },
+      { label: '7 kunlik tushum', value: "0 so'm", hint: "Database tayyor bo'lsa chiqadi" },
     ],
     orders: [],
   }
