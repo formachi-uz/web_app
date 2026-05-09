@@ -112,9 +112,10 @@ export async function POST(req: NextRequest) {
       `Telefon: ${customerPhone || '-'}\n` +
       `Fayl: ${file.name || 'check'}`
 
+    const groupCandidates = chatCandidates(GROUP_CHECKS_ID, true)
     const targetChats = [
-      ...chatCandidates(GROUP_CHECKS_ID, true),
-      ...chatCandidates(ADMIN_IDS, false),
+      ...groupCandidates,
+      ...chatCandidates(ADMIN_IDS, true),
     ]
     const result = await sendCheckToFirstWorkingChat([...new Set(targetChats)], orderId, caption, file)
 
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
         success: true,
         sent_chat_id: result.chatId,
         status_updated: statusUpdated,
-        tried_fallback: result.chatId !== chatCandidates(GROUP_CHECKS_ID, true)[0],
+        tried_fallback: result.chatId !== groupCandidates[0],
       })
     }
 
