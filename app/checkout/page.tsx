@@ -9,7 +9,7 @@ import { CartItem } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
 
 const PAYNET_LINK =
-  "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
+  "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ02021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
 const CARD_NUMBER = '9860340101082121'
 const CARD_OWNER = "Xolbo'tayev Bobur"
 const CARD_PAYMENT = `${CARD_NUMBER} - ${CARD_OWNER}`
@@ -29,6 +29,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState('')
   const [checkFile, setCheckFile] = useState<File | null>(null)
   const [checkLoading, setCheckLoading] = useState(false)
+  const [checkUploaded, setCheckUploaded] = useState(false)
   const [checkMessage, setCheckMessage] = useState('')
   const [submittedItems, setSubmittedItems] = useState<CartItem[]>([])
   const [submittedTotal, setSubmittedTotal] = useState(0)
@@ -47,12 +48,12 @@ export default function CheckoutPage() {
   const paymentExpired = paymentSeconds <= 0
 
   useEffect(() => {
-    if (step !== 'success' || form.paymentType !== 'card' || paymentSeconds <= 0) return
+    if (step !== 'success' || form.paymentType !== 'card' || checkUploaded || paymentSeconds <= 0) return
     const timer = window.setInterval(() => {
       setPaymentSeconds((value) => Math.max(0, value - 1))
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [step, form.paymentType, paymentSeconds])
+  }, [step, form.paymentType, checkUploaded, paymentSeconds])
 
   const handleInfoSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -92,6 +93,7 @@ export default function CheckoutPage() {
       setPaymentSeconds(PAYMENT_WINDOW_SECONDS)
       setCopyMessage('')
       setCheckFile(null)
+      setCheckUploaded(false)
       setCheckMessage('')
       setSubmittedItems(orderItems)
       setSubmittedTotal(orderTotal)
@@ -131,6 +133,7 @@ export default function CheckoutPage() {
       return
     }
     setCheckFile(file)
+    setCheckUploaded(false)
     setCheckMessage(`${file.name} tanlandi. Endi "Chekni yuborish" tugmasini bosing.`)
   }
 
@@ -158,10 +161,14 @@ export default function CheckoutPage() {
       if (!res.ok) throw new Error(data.error || 'Chek yuborilmadi')
 
       setCheckFile(null)
-      setCheckMessage('Chek qabul qilindi. Admin tekshiradi.')
-      trackEvent('check_uploaded', { order_id: orderId })
+      setCheckUploaded(true)
+      setCheckMessage(data.status_updated === false
+        ? 'Chek qabul qilindi. Admin tekshiradi. Statusni admin qo‘lda tasdiqlaydi.'
+        : 'Chek qabul qilindi. Buyurtma holati: CHEK YUBORILDI.')
+      trackEvent('check_uploaded', { order_id: orderId, status_updated: data.status_updated !== false })
     } catch (err: any) {
       trackEvent('checkout_error', { message: err.message, order_id: orderId, type: 'check_upload' })
+      setCheckUploaded(false)
       setCheckMessage(err.message)
     } finally {
       setCheckLoading(false)
@@ -256,6 +263,7 @@ export default function CheckoutPage() {
                 expired={paymentExpired}
                 checkFile={checkFile}
                 checkLoading={checkLoading}
+                checkUploaded={checkUploaded}
                 checkMessage={checkMessage}
                 copyMessage={copyMessage}
                 onCopy={copyCardNumber}
@@ -283,6 +291,7 @@ function PaymentWindow({
   expired,
   checkFile,
   checkLoading,
+  checkUploaded,
   checkMessage,
   copyMessage,
   onCopy,
@@ -294,6 +303,7 @@ function PaymentWindow({
   expired: boolean
   checkFile: File | null
   checkLoading: boolean
+  checkUploaded: boolean
   checkMessage: string
   copyMessage: string
   onCopy: () => void
@@ -301,15 +311,15 @@ function PaymentWindow({
   onUpload: () => void
 }) {
   return (
-    <div className="professional-payment-card">
+    <div className={checkUploaded ? 'professional-payment-card payment-card-paid' : 'professional-payment-card'}>
       <div className="payment-card-head">
         <div>
-          <span className="section-kicker"><ShieldCheck size={14} /> To'lov oynasi</span>
-          <h2>15 daqiqa ichida to'lang</h2>
+          <span className="section-kicker"><ShieldCheck size={14} /> {checkUploaded ? 'Chek yuborildi' : "To'lov oynasi"}</span>
+          <h2>{checkUploaded ? 'Admin tekshirmoqda' : "15 daqiqa ichida to'lang"}</h2>
         </div>
         <div className={expired ? 'payment-timer expired' : 'payment-timer'}>
-          {formatTime(seconds)}
-          <small>qolgan vaqt</small>
+          {checkUploaded ? <CheckCircle size={28} /> : formatTime(seconds)}
+          <small>{checkUploaded ? 'qabul qilindi' : 'qolgan vaqt'}</small>
         </div>
       </div>
 
@@ -318,38 +328,52 @@ function PaymentWindow({
         <strong>{total.toLocaleString()} so'm</strong>
       </div>
 
-      <div className="payment-method-row">
-        <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="payment-method-chip">
-          <span>Paynet</span>
-          <strong>To'lash</strong>
-        </a>
-        <div className="payment-method-chip">
-          <span>Payme / Click</span>
-          <strong>Tez orada</strong>
-        </div>
-      </div>
+      {!checkUploaded && (
+        <>
+          <div className="payment-method-row">
+            <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="payment-method-chip">
+              <span>Paynet</span>
+              <strong>To'lash</strong>
+            </a>
+            <div className="payment-method-chip">
+              <span>Payme / Click</span>
+              <strong>Tez orada</strong>
+            </div>
+          </div>
 
-      <div className="payment-card-number">
-        <div>
-          <span>Karta orqali o'tkazma</span>
-          <strong>{CARD_PAYMENT}</strong>
-        </div>
-        <button type="button" className="payment-copy-btn" onClick={onCopy}><Copy size={14} /> Nusxa</button>
-      </div>
-      {copyMessage && <div className="check-upload-message">{copyMessage}</div>}
+          <div className="payment-card-number">
+            <div>
+              <span>Karta orqali o'tkazma</span>
+              <strong>{CARD_PAYMENT}</strong>
+            </div>
+            <button type="button" className="payment-copy-btn" onClick={onCopy}><Copy size={14} /> Nusxa</button>
+          </div>
+          {copyMessage && <div className="check-upload-message">{copyMessage}</div>}
+        </>
+      )}
 
-      <div className="payment-upload-zone">
-        <p>To'lovdan keyin chek rasmini yoki PDF faylni yuklang. Admin tekshiradi va buyurtmani tasdiqlaydi.</p>
-        <div className="payment-upload-actions">
-          <label className="payment-upload-label">
-            <Upload size={16} /> Chek yuklash
-            <input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => onFileChange(event.target.files?.[0] || null)} />
-          </label>
-          <button type="button" className="btn btn-primary" disabled={!checkFile || checkLoading} onClick={onUpload}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
-        </div>
+      <div className={checkUploaded ? 'payment-upload-zone payment-upload-success' : 'payment-upload-zone'}>
+        {checkUploaded ? (
+          <>
+            <div className="payment-success-icon"><CheckCircle size={26} /></div>
+            <strong>Chek qabul qilindi</strong>
+            <p>Chekingiz admin kanaliga yuborildi. Admin to'lovni tekshirib, buyurtmani tasdiqlaydi.</p>
+          </>
+        ) : (
+          <>
+            <p>To'lovdan keyin chek rasmini yoki PDF faylni yuklang. Admin tekshiradi va buyurtmani tasdiqlaydi.</p>
+            <div className="payment-upload-actions">
+              <label className="payment-upload-label">
+                <Upload size={16} /> Chek yuklash
+                <input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => onFileChange(event.target.files?.[0] || null)} />
+              </label>
+              <button type="button" className="btn btn-primary" disabled={!checkFile || checkLoading} onClick={onUpload}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
+            </div>
+          </>
+        )}
         {checkFile && <div className="check-upload-file">{checkFile.name}</div>}
-        {checkMessage && <div className="check-upload-message">{checkMessage}</div>}
-        {expired && <div className="payment-expired-note"><Clock size={14} /> 15 minut tugadi. To'lov qilgan bo'lsangiz chekni baribir yuboring yoki admin bilan bog'laning.</div>}
+        {checkMessage && <div className={checkUploaded ? 'check-upload-message check-upload-message-success' : 'check-upload-message'}>{checkMessage}</div>}
+        {expired && !checkUploaded && <div className="payment-expired-note"><Clock size={14} /> 15 minut tugadi. To'lov qilgan bo'lsangiz chekni baribir yuboring yoki admin bilan bog'laning.</div>}
       </div>
     </div>
   )
