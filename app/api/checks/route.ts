@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import pool from '@/lib/db'
 import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
@@ -73,7 +74,8 @@ export async function POST(req: NextRequest) {
 
     const res = await sendCheck(GROUP_CHECKS_ID, orderId, caption, file)
     if (res.ok) {
-      return NextResponse.json({ success: true })
+      const statusUpdated = await markOrderCheckUploaded(orderId)
+      return NextResponse.json({ success: true, status_updated: statusUpdated })
     }
 
     const errorText = await res.text()
@@ -88,7 +90,8 @@ export async function POST(req: NextRequest) {
 
       const fallbackRes = await sendCheck(ADMIN_ID, orderId, caption, file)
       if (fallbackRes.ok) {
-        return NextResponse.json({ success: true, fallback: 'admin' })
+        const statusUpdated = await markOrderCheckUploaded(orderId)
+        return NextResponse.json({ success: true, fallback: 'admin', status_updated: statusUpdated })
       }
 
       throw new Error(`Telegram fallback upload error: ${await fallbackRes.text()}`)
@@ -100,4 +103,79 @@ export async function POST(req: NextRequest) {
     await notifyAdminError('Checks API error', error)
     return NextResponse.json({ error: 'Chek yuborishda xato yuz berdi' }, { status: 500 })
   }
+}
+
+async function markOrderCheckUploaded(orderId: string) {
+  const id = Number(orderId)
+  if (!Number.isFinite(id) || !process.env.DATABASE_URL) return false
+
+  try {
+    const columns = await getTableColumns('orders')
+    if (!columns.has('id')) return false
+
+    const updates: string[] = []
+    const values: Array<string | number> = []
+    const addValue = (value: string | number) => {
+      values.push(value)
+      return `$${values.length}`
+    }
+
+    if (columns.has('status')) {
+      updates.push(`status = ${addValue(await getEnumCompatibleValue('orders', 'status', 'CHEK_YUBORILDI'))}`)
+    }
+    if (columns.has('payment_status')) {
+      updates.push(`payment_status = ${addValue(await getEnumCompatibleValue('orders', 'payment_status', 'CHEK_YUBORILDI'))}`)
+    }
+    if (columns.has('check_status')) {
+      updates.push(`check_status = ${addValue(await getEnumCompatibleValue('orders', 'check_status', 'CHEK_YUBORILDI'))}`)
+    }
+    for (const column of ['check_uploaded_at', 'receipt_uploaded_at', 'payment_receipt_uploaded_at']) {
+      if (columns.has(column)) updates.push(`${column} = NOW()`)
+    }
+    if (columns.has('updated_at')) updates.push('updated_at = NOW()')
+
+    if (!updates.length) return false
+
+    values.push(id)
+    await pool.query(`UPDATE orders SET ${updates.join(', ')} WHERE id = $${values.length}`, values)
+    return true
+  } catch (error) {
+    console.error('Order check status update failed:', error)
+    await notifyAdminError('Order check status update failed', error, { order_id: orderId })
+    return false
+  }
+}
+
+async function getTableColumns(tableName: string) {
+  const { rows } = await pool.query<{ column_name: string }>(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  )
+  return new Set(rows.map((row) => row.column_name))
+}
+
+async function getEnumCompatibleValue(tableName: string, columnName: string, value: string) {
+  const { rows } = await pool.query<{ enumlabel: string }>(
+    `SELECT e.enumlabel
+     FROM pg_attribute a
+     JOIN pg_class c ON c.oid = a.attrelid
+     JOIN pg_type t ON t.oid = a.atttypid
+     JOIN pg_enum e ON e.enumtypid = t.oid
+     WHERE c.relname = $1 AND a.attname = $2
+     ORDER BY e.enumsortorder`,
+    [tableName, columnName]
+  )
+
+  const labels = rows.map((row) => row.enumlabel)
+  if (!labels.length) return value
+  if (labels.includes(value)) return value
+  if (labels.includes(value.toUpperCase())) return value.toUpperCase()
+  if (labels.includes('CHEK_YUBORILDI')) return 'CHEK_YUBORILDI'
+  if (labels.includes('TOLOV_KUTILMOQDA')) return 'TOLOV_KUTILMOQDA'
+  if (labels.includes('TASDIQLANDI')) return 'TASDIQLANDI'
+  if (labels.includes('pending')) return 'pending'
+  if (labels.includes('paid')) return 'paid'
+  return labels[0]
 }
