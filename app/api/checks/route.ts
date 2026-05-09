@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 const BOT_TOKEN = process.env.BOT_TOKEN!
 const GROUP_CHECKS_ID = process.env.GROUP_CHECKS_ID || '-1003912030329'
-const ADMIN_ID = process.env.GLAVNIY_ADMIN_ID || '8156792282'
+const ADMIN_IDS = process.env.GLAVNIY_ADMIN_ID || '8156792282'
 const MAX_CHECK_SIZE = 10 * 1024 * 1024
 
 function checkActionsKeyboard(orderId: string) {
@@ -25,6 +25,31 @@ function validateCheckFile(file: File) {
   return ''
 }
 
+function chatCandidates(rawChatIds: string, includeGroupFormats = true) {
+  const candidates: string[] = []
+
+  for (const rawValue of rawChatIds.split(/[,
+\s]+/)) {
+    const value = rawValue.trim()
+    if (!value) continue
+
+    candidates.push(value)
+
+    if (!includeGroupFormats) continue
+
+    if (/^\d+$/.test(value)) {
+      candidates.push(`-${value}`)
+      candidates.push(`-100${value}`)
+    }
+
+    if (/^-\d+$/.test(value) && !value.startsWith('-100')) {
+      candidates.push(`-100${value.slice(1)}`)
+    }
+  }
+
+  return [...new Set(candidates)]
+}
+
 function buildTelegramForm(chatId: string, orderId: string, caption: string, file: File) {
   const telegramForm = new FormData()
   telegramForm.append('chat_id', chatId)
@@ -37,10 +62,25 @@ function buildTelegramForm(chatId: string, orderId: string, caption: string, fil
 
 async function sendCheck(chatId: string, orderId: string, caption: string, file: File) {
   const method = file.type.startsWith('image/') ? 'sendPhoto' : 'sendDocument'
-  return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+  const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
     method: 'POST',
     body: buildTelegramForm(chatId, orderId, caption, file),
   })
+
+  if (response.ok) return { ok: true, chatId, error: '' }
+  return { ok: false, chatId, error: await response.text() }
+}
+
+async function sendCheckToFirstWorkingChat(chatIds: string[], orderId: string, caption: string, file: File) {
+  const errors: string[] = []
+
+  for (const chatId of chatIds) {
+    const result = await sendCheck(chatId, orderId, caption, file)
+    if (result.ok) return { ok: true, chatId, errors }
+    errors.push(`${chatId}: ${result.error}`)
+  }
+
+  return { ok: false, chatId: null, errors }
 }
 
 export async function POST(req: NextRequest) {
@@ -72,32 +112,28 @@ export async function POST(req: NextRequest) {
       `Telefon: ${customerPhone || '-'}\n` +
       `Fayl: ${file.name || 'check'}`
 
-    const res = await sendCheck(GROUP_CHECKS_ID, orderId, caption, file)
-    if (res.ok) {
+    const targetChats = [
+      ...chatCandidates(GROUP_CHECKS_ID, true),
+      ...chatCandidates(ADMIN_IDS, false),
+    ]
+    const result = await sendCheckToFirstWorkingChat([...new Set(targetChats)], orderId, caption, file)
+
+    if (result.ok) {
       const statusUpdated = await markOrderCheckUploaded(orderId)
-      return NextResponse.json({ success: true, status_updated: statusUpdated })
-    }
-
-    const errorText = await res.text()
-    const canFallbackToAdmin = ADMIN_ID && ADMIN_ID !== GROUP_CHECKS_ID
-
-    if (errorText.toLowerCase().includes('chat not found') && canFallbackToAdmin) {
-      await notifyAdminError('Checks chat not found', new Error(errorText), {
-        GROUP_CHECKS_ID,
-        fallback_admin_id: ADMIN_ID,
-        order_id: orderId,
+      return NextResponse.json({
+        success: true,
+        sent_chat_id: result.chatId,
+        status_updated: statusUpdated,
+        tried_fallback: result.chatId !== chatCandidates(GROUP_CHECKS_ID, true)[0],
       })
-
-      const fallbackRes = await sendCheck(ADMIN_ID, orderId, caption, file)
-      if (fallbackRes.ok) {
-        const statusUpdated = await markOrderCheckUploaded(orderId)
-        return NextResponse.json({ success: true, fallback: 'admin', status_updated: statusUpdated })
-      }
-
-      throw new Error(`Telegram fallback upload error: ${await fallbackRes.text()}`)
     }
 
-    throw new Error(`Telegram check upload error: ${errorText}`)
+    await notifyAdminError('Checks upload failed for all chats', new Error(result.errors.join('\n')), {
+      GROUP_CHECKS_ID,
+      fallback_admin_id: ADMIN_IDS,
+      order_id: orderId,
+    })
+    throw new Error(`Telegram check upload error: ${result.errors.join(' | ')}`)
   } catch (error) {
     console.error('Checks API error:', error)
     await notifyAdminError('Checks API error', error)
