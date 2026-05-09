@@ -9,7 +9,7 @@ import { CartItem } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
 
 const PAYNET_LINK =
-  "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ02021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
+  "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
 const CARD_NUMBER = '9860340101082121'
 const CARD_OWNER = "Xolbo'tayev Bobur"
 const CARD_PAYMENT = `${CARD_NUMBER} - ${CARD_OWNER}`
@@ -163,7 +163,7 @@ export default function CheckoutPage() {
       setCheckFile(null)
       setCheckUploaded(true)
       setCheckMessage(data.status_updated === false
-        ? 'Chek qabul qilindi. Admin tekshiradi. Statusni admin qo‘lda tasdiqlaydi.'
+        ? "Chek qabul qilindi. Admin tekshiradi. Statusni admin qo'lda tasdiqlaydi."
         : 'Chek qabul qilindi. Buyurtma holati: CHEK YUBORILDI.')
       trackEvent('check_uploaded', { order_id: orderId, status_updated: data.status_updated !== false })
     } catch (err: any) {
