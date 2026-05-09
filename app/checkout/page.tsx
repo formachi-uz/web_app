@@ -1,17 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, ChevronLeft, CreditCard, Handshake } from 'lucide-react'
+import { CheckCircle, ChevronLeft, Clock, Copy, CreditCard, Handshake, ShieldCheck, Upload } from 'lucide-react'
 import { useCart } from '@/lib/cart'
 import { CartItem } from '@/lib/db'
 import { trackEvent } from '@/lib/analytics'
 
 const PAYNET_LINK =
   "https://app.paynet.uz/qr-online/00020101021140440012qr-online.uz01186r0C2GWSuXEb8UE7KQ0202115204531153038605802UZ5910AO'PAYNET'6008Tashkent610610002164280002uz0106PAYNET0208Toshkent80520012qr-online.uz03097120207070419marketing@paynet.uz6304A3D2"
-const CARD_PAYMENT = "9860340101082121 - Xolbo'tayev Bobur"
+const CARD_NUMBER = '9860340101082121'
+const CARD_OWNER = "Xolbo'tayev Bobur"
+const CARD_PAYMENT = `${CARD_NUMBER} - ${CARD_OWNER}`
 const MAX_CHECK_SIZE = 10 * 1024 * 1024
+const PAYMENT_WINDOW_SECONDS = 15 * 60
 
 type Step = 'info' | 'payment' | 'success'
 type PaymentType = 'card' | 'credit'
@@ -29,6 +32,8 @@ export default function CheckoutPage() {
   const [checkMessage, setCheckMessage] = useState('')
   const [submittedItems, setSubmittedItems] = useState<CartItem[]>([])
   const [submittedTotal, setSubmittedTotal] = useState(0)
+  const [paymentSeconds, setPaymentSeconds] = useState(PAYMENT_WINDOW_SECONDS)
+  const [copyMessage, setCopyMessage] = useState('')
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -39,6 +44,15 @@ export default function CheckoutPage() {
 
   const updateForm = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }))
   const fullAddress = () => `${form.deliveryZone === 'tashkent' ? 'Toshkent shahar' : 'Viloyat'}: ${form.address}`
+  const paymentExpired = paymentSeconds <= 0
+
+  useEffect(() => {
+    if (step !== 'success' || form.paymentType !== 'card' || paymentSeconds <= 0) return
+    const timer = window.setInterval(() => {
+      setPaymentSeconds((value) => Math.max(0, value - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [step, form.paymentType, paymentSeconds])
 
   const handleInfoSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -75,6 +89,8 @@ export default function CheckoutPage() {
 
       setOrderId(data.order_id)
       updateForm('paymentType', paymentType)
+      setPaymentSeconds(PAYMENT_WINDOW_SECONDS)
+      setCopyMessage('')
       setCheckFile(null)
       setCheckMessage('')
       setSubmittedItems(orderItems)
@@ -152,6 +168,15 @@ export default function CheckoutPage() {
     }
   }
 
+  const copyCardNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(CARD_NUMBER)
+      setCopyMessage('Karta raqam nusxalandi')
+    } catch {
+      setCopyMessage(`Karta raqam: ${CARD_NUMBER}`)
+    }
+  }
+
   if (items.length === 0 && step === 'info') {
     return (
       <div style={{ textAlign: 'center', padding: '120px 24px' }}>
@@ -174,7 +199,7 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      <div className="container checkout-container" style={{ maxWidth: 640 }}>
+      <div className="container checkout-container" style={{ maxWidth: 720 }}>
         {step !== 'success' && <Steps current={step} />}
         {error && <Alert>{error}</Alert>}
 
@@ -207,10 +232,11 @@ export default function CheckoutPage() {
         {step === 'payment' && (
           <div className="checkout-payment">
             <Title>TO&apos;LOV USULI</Title>
-            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 32 }}>Qulay to'lov usulini tanlang</p>
+            <CartSummary items={items} total={total()} compact />
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 24 }}>Buyurtmani yaratib, keyingi oynada summa, karta raqam va chek yuklash chiqadi.</p>
             <div className="payment-options">
-              <PaymentButton title="Karta / Paynet" description="Paynet yoki karta orqali to'lang. Chek talab qilinadi." icon={<CreditCard size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('card')} />
-              <PaymentButton title="Uzum Nasiya" description="Admin tez orada siz bilan bog'lanadi" icon={<Handshake size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('credit')} />
+              <PaymentButton title="Karta / Paynet" description="15 minut ichida to'lov qiling va chekni yuklang." icon={<CreditCard size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('card')} />
+              <PaymentButton title="Uzum Nasiya" description="Ariza adminga yuboriladi, siz bilan bog'lanamiz." icon={<Handshake size={22} color="var(--accent)" />} loading={loading} onClick={() => handlePayment('credit')} />
             </div>
             {loading && <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--muted)', fontSize: 13 }}>Buyurtma yuborilmoqda...</div>}
           </div>
@@ -224,26 +250,20 @@ export default function CheckoutPage() {
             <OrderSummary items={submittedItems} total={submittedTotal} paymentType={form.paymentType} phone={form.phone} address={fullAddress()} />
 
             {form.paymentType === 'card' ? (
-              <div className="success-card">
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>To'lovni amalga oshiring</div>
-                <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>Paynet linki yoki karta raqami orqali to'lang, keyin chekni shu yerga yuklang.</p>
-                <div className="payment-help-grid">
-                  <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-primary">Paynet orqali to'lash</a>
-                  <div className="card-number-box">
-                    <span>Karta orqali to'lov</span>
-                    <strong>{CARD_PAYMENT}</strong>
-                  </div>
-                </div>
-                <div className="check-upload-box">
-                  <div className="check-upload-rules">Rasm yoki PDF yuklang. Fayl hajmi 10 MB dan oshmasin.</div>
-                  <label className="check-upload-label">Chek rasmini yuklang<input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => handleCheckFileChange(event.target.files?.[0] || null)} /></label>
-                  {checkFile && <div className="check-upload-file">{checkFile.name}</div>}
-                  <button type="button" className="btn btn-secondary" disabled={!checkFile || checkLoading} onClick={handleCheckUpload} style={{ width: '100%', marginTop: 12 }}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
-                  {checkMessage && <div className="check-upload-message">{checkMessage}</div>}
-                </div>
-              </div>
+              <PaymentWindow
+                total={submittedTotal}
+                seconds={paymentSeconds}
+                expired={paymentExpired}
+                checkFile={checkFile}
+                checkLoading={checkLoading}
+                checkMessage={checkMessage}
+                copyMessage={copyMessage}
+                onCopy={copyCardNumber}
+                onFileChange={handleCheckFileChange}
+                onUpload={handleCheckUpload}
+              />
             ) : (
-              <div className="success-card"><div style={{ fontWeight: 600, marginBottom: 8 }}>Uzum Nasiya</div><p style={{ color: 'var(--muted)', fontSize: 13 }}>Admin tez orada siz bilan bog'lanib, nasiya shartlarini tushuntiradi.</p></div>
+              <div className="success-card"><div style={{ fontWeight: 600, marginBottom: 8 }}>Uzum Nasiya</div><p style={{ color: 'var(--muted)', fontSize: 13 }}>Arizangiz adminga yuborildi. Tez orada siz bilan bog'lanamiz.</p></div>
             )}
 
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -252,6 +272,84 @@ export default function CheckoutPage() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function PaymentWindow({
+  total,
+  seconds,
+  expired,
+  checkFile,
+  checkLoading,
+  checkMessage,
+  copyMessage,
+  onCopy,
+  onFileChange,
+  onUpload,
+}: {
+  total: number
+  seconds: number
+  expired: boolean
+  checkFile: File | null
+  checkLoading: boolean
+  checkMessage: string
+  copyMessage: string
+  onCopy: () => void
+  onFileChange: (file?: File | null) => void
+  onUpload: () => void
+}) {
+  return (
+    <div className="professional-payment-card">
+      <div className="payment-card-head">
+        <div>
+          <span className="section-kicker"><ShieldCheck size={14} /> To'lov oynasi</span>
+          <h2>15 daqiqa ichida to'lang</h2>
+        </div>
+        <div className={expired ? 'payment-timer expired' : 'payment-timer'}>
+          {formatTime(seconds)}
+          <small>qolgan vaqt</small>
+        </div>
+      </div>
+
+      <div className="payment-amount-box">
+        <span>To'lanadigan summa</span>
+        <strong>{total.toLocaleString()} so'm</strong>
+      </div>
+
+      <div className="payment-method-row">
+        <a href={PAYNET_LINK} target="_blank" rel="noopener noreferrer" className="payment-method-chip">
+          <span>Paynet</span>
+          <strong>To'lash</strong>
+        </a>
+        <div className="payment-method-chip">
+          <span>Payme / Click</span>
+          <strong>Tez orada</strong>
+        </div>
+      </div>
+
+      <div className="payment-card-number">
+        <div>
+          <span>Karta orqali o'tkazma</span>
+          <strong>{CARD_PAYMENT}</strong>
+        </div>
+        <button type="button" className="payment-copy-btn" onClick={onCopy}><Copy size={14} /> Nusxa</button>
+      </div>
+      {copyMessage && <div className="check-upload-message">{copyMessage}</div>}
+
+      <div className="payment-upload-zone">
+        <p>To'lovdan keyin chek rasmini yoki PDF faylni yuklang. Admin tekshiradi va buyurtmani tasdiqlaydi.</p>
+        <div className="payment-upload-actions">
+          <label className="payment-upload-label">
+            <Upload size={16} /> Chek yuklash
+            <input type="file" accept="image/*,.pdf,application/pdf" onChange={(event) => onFileChange(event.target.files?.[0] || null)} />
+          </label>
+          <button type="button" className="btn btn-primary" disabled={!checkFile || checkLoading} onClick={onUpload}>{checkLoading ? 'Yuborilmoqda...' : 'Chekni yuborish'}</button>
+        </div>
+        {checkFile && <div className="check-upload-file">{checkFile.name}</div>}
+        {checkMessage && <div className="check-upload-message">{checkMessage}</div>}
+        {expired && <div className="payment-expired-note"><Clock size={14} /> 15 minut tugadi. To'lov qilgan bo'lsangiz chekni baribir yuboring yoki admin bilan bog'laning.</div>}
       </div>
     </div>
   )
@@ -289,9 +387,14 @@ function Steps({ current }: { current: Step }) {
     return <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className={active || done ? 'step-dot step-dot-active' : 'step-dot'}>{index + 1}</div><span className={active ? 'step-label step-label-active' : 'step-label'}>{step === 'info' ? "Ma'lumotlar" : "To'lov"}</span>{index < steps.length - 1 && <div className={done ? 'step-line step-line-active' : 'step-line'} />}</div>
   })}</div>
 }
-function CartSummary({ items, total }: { items: CartItem[]; total: number }) {
-  return <div className="summary-card"><div className="summary-label">Savatingiz</div>{items.map((item, index) => <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ${item.back_print}` : ''} x {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>)}<div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div></div>
+function CartSummary({ items, total, compact = false }: { items: CartItem[]; total: number; compact?: boolean }) {
+  return <div className="summary-card" style={compact ? { marginBottom: 18 } : undefined}><div className="summary-label">Savatingiz</div>{items.map((item, index) => <div key={index} className="summary-row"><span>{item.name}{item.size ? ` (${item.size})` : ''}{item.back_print ? ` | ${item.back_print}` : ''} x {item.qty}</span><span style={{ color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>{(item.price * item.qty).toLocaleString()}</span></div>)}<div className="summary-total"><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>Jami:</span><span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--accent)' }}>{total.toLocaleString()} so'm</span></div></div>
 }
 function PaymentButton({ title, description, icon, loading, onClick }: { title: string; description: string; icon: React.ReactNode; loading: boolean; onClick: () => void }) {
   return <button disabled={loading} onClick={onClick} className="payment-option"><div className="payment-option-inner"><div className="payment-icon">{icon}</div><div className="payment-copy"><div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{title}</div><div style={{ fontSize: 12, color: 'var(--muted)' }}>{description}</div></div></div></button>
+}
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60).toString().padStart(2, '0')
+  const rest = (seconds % 60).toString().padStart(2, '0')
+  return `${minutes}:${rest}`
 }
