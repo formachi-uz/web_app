@@ -119,7 +119,7 @@ async function ensureAnalyticsTable() {
   }
 }
 
-async function safeRows<T extends Record<string, unknown>>(sql: string): Promise<T[]> {
+async function safeRows<T>(sql: string): Promise<T[]> {
   try {
     const result = await pool.query(sql)
     return result.rows as T[]
