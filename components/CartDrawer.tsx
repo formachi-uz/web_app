@@ -82,12 +82,16 @@ export default function CartDrawer() {
 
         {items.length > 0 && (
           <div className="cart-drawer-foot">
-            <div>
+            <div className="cart-total-row">
               <span>Jami:</span>
               <strong>{total().toLocaleString()} so'm</strong>
             </div>
+            <p className="cart-foot-note">Buyurtmani yakunlash uchun ma'lumotlarni kiriting va to'lov turini tanlang.</p>
             <Link href="/checkout" onClick={close} className="btn btn-primary">
               Buyurtma berish
+            </Link>
+            <Link href="/catalog" onClick={close} className="cart-continue-link">
+              Yana mahsulot ko'rish
             </Link>
           </div>
         )}
