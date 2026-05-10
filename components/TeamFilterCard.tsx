@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { getTeamThemeStyle } from '@/lib/teamTheme'
 
 export default function TeamFilterCard({
   name,
@@ -24,7 +25,7 @@ export default function TeamFilterCard({
     .toUpperCase()
 
   return (
-    <Link href={href} className={active ? 'quick-team active' : 'quick-team'}>
+    <Link href={href} className={active ? 'quick-team active' : 'quick-team'} style={getTeamThemeStyle(name)}>
       <span className="quick-team-logo">
         {!failed ? <img src={logo} alt={name} onError={() => setFailed(true)} /> : <b>{initials || 'FM'}</b>}
       </span>
