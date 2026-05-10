@@ -1,3 +1,65 @@
+.product-tilt-frame {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --tilt-scale: 1;
+  --shine-x: 50%;
+  --shine-y: 42%;
+  --shine-opacity: .22;
+  overflow: hidden;
+  isolation: isolate;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  touch-action: pan-y;
+}
+
+.product-tilt-frame::before,
+.product-tilt-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: var(--shine-opacity);
+  transition: opacity .18s ease;
+}
+
+.product-tilt-frame::before {
+  background:
+    radial-gradient(circle at var(--shine-x) var(--shine-y), rgba(255, 222, 137, .25), transparent 18%),
+    linear-gradient(115deg, transparent 26%, rgba(57,255,136,.08) 38%, rgba(255, 217, 135, .16) 48%, transparent 60%);
+  mix-blend-mode: screen;
+}
+
+.product-tilt-frame::after {
+  inset: 18px;
+  border-radius: calc(var(--radius) - 6px);
+  border: 1px solid rgba(57,255,136,.18);
+  box-shadow:
+    inset 0 0 34px rgba(57,255,136,.08),
+    0 0 34px rgba(57,255,136,.08);
+  transform: translateZ(58px);
+}
+
+.product-tilt-frame img,
+.product-tilt-frame .product-image-placeholder {
+  position: relative;
+  z-index: 1;
+  transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(var(--tilt-scale));
+  transform-style: preserve-3d;
+  transition: transform .18s ease, filter .18s ease;
+  will-change: transform;
+}
+
+.product-tilt-frame:hover img {
+  filter: drop-shadow(0 30px 34px rgba(0,0,0,.56)) drop-shadow(0 0 22px rgba(57,255,136,.16));
+}
+
+.product-tilt-frame .product-zoom,
+.product-tilt-frame .product-sale-badge,
+.product-tilt-frame .product-stock-badge {
+  z-index: 6;
+}
+
 .jersey-image-print-overlay {
   position: absolute;
   inset: 0;
@@ -8,7 +70,10 @@
   justify-content: center;
   padding-top: 6%;
   pointer-events: none;
-  transform: translateY(-4%);
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) scale(var(--tilt-scale, 1)) translateY(-4%) translateZ(46px);
+  transform-style: preserve-3d;
+  transition: transform .18s ease;
+  will-change: transform;
 }
 
 .jersey-image-print-overlay strong {
