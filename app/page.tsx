@@ -30,14 +30,14 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PromoCard
             href="/catalog?mainCategory=FORMLAR"
-            image="/images/premium-jersey-promo.jpg"
+            image="/images/premium-jersey-promo.svg"
             eyebrow="Yangi kolleksiya"
             title="Top Formalar"
             text={`${topFormaCount} ta premium forma va ism yozish xizmati`}
           />
           <PromoCard
             href="/catalog?mainCategory=BUTSIYLAR"
-            image="/images/premium-boot-promo.jpg"
+            image="/images/premium-boot-promo.svg"
             eyebrow="Professional tanlov"
             title="Premium Butsiylar"
             text={`${bootCount} ta tezlik va nazorat uchun tanlov`}
