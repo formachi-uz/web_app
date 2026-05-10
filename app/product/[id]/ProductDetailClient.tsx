@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { CSSProperties, PointerEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Home, Minus, Plus, Send, ShoppingCart, Zap, ZoomIn } from 'lucide-react'
@@ -15,6 +16,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [backPrint, setBackPrint] = useState<boolean | null>(null)
   const [printPlayerName, setPrintPlayerName] = useState('')
   const [printNumber, setPrintNumber] = useState('')
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0, shineX: 50, shineY: 42, active: false })
   const [added, setAdded] = useState(false)
   const [notice, setNotice] = useState('')
   const addItem = useCart((s) => s.addItem)
@@ -42,6 +44,14 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const previewName = cleanPrintName(printPlayerName) || 'HUSANOV'
   const previewNumber = cleanPrintNumber(printNumber) || '45'
   const backPrintText = `${previewName} ${previewNumber}`.trim()
+  const tiltStyle = {
+    '--tilt-x': `${tilt.rx.toFixed(2)}deg`,
+    '--tilt-y': `${tilt.ry.toFixed(2)}deg`,
+    '--tilt-scale': tilt.active ? '1.018' : '1',
+    '--shine-x': `${tilt.shineX.toFixed(1)}%`,
+    '--shine-y': `${tilt.shineY.toFixed(1)}%`,
+    '--shine-opacity': tilt.active ? '.86' : '.22',
+  } as CSSProperties
 
   useEffect(() => {
     trackEvent('product_view', {
@@ -130,6 +140,26 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     }
   }
 
+  const handleTiltMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.buttons > 0) return
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1)
+    const y = Math.min(Math.max((event.clientY - rect.top) / rect.height, 0), 1)
+
+    setTilt({
+      rx: (0.5 - y) * 11,
+      ry: (x - 0.5) * 13,
+      shineX: x * 100,
+      shineY: y * 100,
+      active: true,
+    })
+  }
+
+  const resetTilt = () => {
+    setTilt({ rx: 0, ry: 0, shineX: 50, shineY: 42, active: false })
+  }
+
   return (
     <div className="product-page">
       <div className="product-breadcrumb">
@@ -164,7 +194,14 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               ))}
             </div>
 
-            <div className="product-image-frame">
+            <div
+              className="product-image-frame product-tilt-frame"
+              style={tiltStyle}
+              onPointerMove={handleTiltMove}
+              onPointerLeave={resetTilt}
+              onPointerCancel={resetTilt}
+              onBlur={resetTilt}
+            >
               {previewSlots[selectedPreview]?.src ? (
                 <img
                   src={previewSlots[selectedPreview].src}
