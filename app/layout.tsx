@@ -6,11 +6,13 @@ import './telegram-webapp-fixes.css'
 import './catalog-polish.css'
 import './admin-payment.css'
 import './jersey-preview.css'
+import './wow-effects.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
 import CartAnalytics from '@/components/CartAnalytics'
 import TelegramWebAppFix from '@/components/TelegramWebAppFix'
+import WowLayer from '@/components/WowLayer'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <CartDrawer />
         <CartAnalytics />
+        <WowLayer />
       </body>
     </html>
   )
