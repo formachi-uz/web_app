@@ -20,7 +20,10 @@ export const useCart = create<CartStore>()(
       addItem: (item) => {
         const items = get().items
         const existing = items.findIndex(
-          (i) => i.product_id === item.product_id && i.size === item.size
+          (i) =>
+            i.product_id === item.product_id &&
+            i.size === item.size &&
+            (i.back_print || null) === (item.back_print || null)
         )
         if (existing >= 0) {
           const updated = [...items]
