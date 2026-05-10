@@ -1,5 +1,6 @@
 import { getCategories, getProducts } from '@/lib/db'
 import { teamFilters } from '@/lib/team-data'
+import { getTeamThemeStyle } from '@/lib/teamTheme'
 import CatalogSearch from '@/components/CatalogSearch'
 import TeamFilterCard from '@/components/TeamFilterCard'
 import Link from 'next/link'
@@ -90,9 +91,11 @@ export default async function CatalogPage({
 
   const showTeamQuickFilter = mainCategory !== 'BUTSIYLAR'
   const showBrandQuickFilter = mainCategory === 'BUTSIYLAR' || (!mainCategory && !team)
+  const activeTheme = team || brand
+  const themeStyle = getTeamThemeStyle(activeTheme)
 
   return (
-    <div className="catalog-page">
+    <div className={activeTheme ? 'catalog-page team-theme-surface' : 'catalog-page'} style={themeStyle}>
       <section className="catalog-hero">
         <div className="container catalog-hero-inner">
           <div className="catalog-hero-content">
@@ -166,7 +169,7 @@ export default async function CatalogPage({
             </div>
             <div className="quick-brand-row">
               {quickBrands.map((item) => (
-                <Link key={item} href={makeQuickHref('brand', item)} className={brand === item ? 'quick-brand active' : 'quick-brand'}>
+                <Link key={item} href={makeQuickHref('brand', item)} className={brand === item ? 'quick-brand active' : 'quick-brand'} style={getTeamThemeStyle(item)}>
                   {item}
                 </Link>
               ))}
