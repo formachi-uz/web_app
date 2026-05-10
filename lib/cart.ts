@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { CartItem } from './db'
+import { triggerGoalBurst } from './wow'
 
 interface CartStore {
   items: CartItem[]
@@ -32,6 +33,10 @@ export const useCart = create<CartStore>()(
         } else {
           set({ items: [...items, item] })
         }
+
+        triggerGoalBurst({
+          subtitle: `${item.name} savatga qo'shildi`,
+        })
       },
 
       removeItem: (index) => {
