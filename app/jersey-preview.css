@@ -153,7 +153,7 @@
 @media (max-width: 720px) {
   .jersey-image-print-overlay {
     padding-top: 8%;
-    transform: translateY(-5%);
+    transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) scale(var(--tilt-scale, 1)) translateY(-5%) translateZ(42px);
   }
 
   .jersey-image-print-overlay strong {
