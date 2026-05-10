@@ -13,7 +13,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1)
   const [selectedPreview, setSelectedPreview] = useState(0)
   const [backPrint, setBackPrint] = useState<boolean | null>(null)
-  const [printName, setPrintName] = useState('')
+  const [printPlayerName, setPrintPlayerName] = useState('')
+  const [printNumber, setPrintNumber] = useState('')
   const [added, setAdded] = useState(false)
   const [notice, setNotice] = useState('')
   const addItem = useCart((s) => s.addItem)
@@ -38,6 +39,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   const unitPrice = product.final_price + (canCustomize && backPrint ? customizationPrice : 0)
   const orderTotal = unitPrice * quantity
   const selectedSizeLabel = selectedSize || (availableStocks.length > 0 ? "O'lcham tanlanmagan" : "O'lcham talab qilinmaydi")
+  const previewName = cleanPrintName(printPlayerName) || 'HUSANOV'
+  const previewNumber = cleanPrintNumber(printNumber) || '45'
+  const backPrintText = `${previewName} ${previewNumber}`.trim()
 
   useEffect(() => {
     trackEvent('product_view', {
@@ -50,6 +54,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
   useEffect(() => {
     setSelectedSize(firstAvailableSize)
     setQuantity(1)
+    setPrintPlayerName('')
+    setPrintNumber('')
     setNotice('')
   }, [product.id, firstAvailableSize])
 
@@ -85,7 +91,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       setNotice('Ism va raqam yozish kerak yoki kerak emasligini tanlang.')
       return
     }
-    if (canCustomize && backPrint && !printName.trim()) {
+    if (canCustomize && backPrint && (!cleanPrintName(printPlayerName) || !cleanPrintNumber(printNumber))) {
       setNotice('Forma orqasiga yoziladigan ism va raqamni kiriting.')
       return
     }
@@ -100,6 +106,8 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       size: selectedSize,
       qty: quantity,
       back_print: Boolean(backPrint),
+      print_name: backPrint ? cleanPrintName(printPlayerName) : null,
+      print_number: backPrint ? cleanPrintNumber(printNumber) : null,
       price: Math.round(unitPrice),
     })
 
@@ -109,7 +117,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
       price: unitPrice,
       qty: quantity,
       size: selectedSize,
-      back_print: backPrint ? printName.trim() : null,
+      back_print: backPrint ? backPrintText : null,
       photo_url: product.photo_url,
     })
 
@@ -175,6 +183,17 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <div className={totalStock <= 3 ? 'product-stock-badge product-stock-low' : 'product-stock-badge'}>
                 {stockLabel}
               </div>
+              {canCustomize && (
+                <div className={backPrint ? 'jersey-print-preview active' : 'jersey-print-preview'} aria-label="Ism va raqam preview">
+                  <span>LIVE PREVIEW</span>
+                  <div className="jersey-back-mini">
+                    <i />
+                    <strong>{previewName}</strong>
+                    <b>{previewNumber}</b>
+                  </div>
+                  <small>{backPrint ? "Forma orqasida shunday ko'rinadi" : 'Ism + raqamni yoqing'}</small>
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,13 +311,35 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                   ))}
                 </div>
                 {backPrint && (
-                  <input
-                    className="input"
-                    placeholder="Masalan: HUSANOV 45"
-                    value={printName}
-                    onChange={(event) => setPrintName(event.target.value.toUpperCase())}
-                    maxLength={25}
-                  />
+                  <div className="print-live-panel">
+                    <div className="print-input-grid">
+                      <label>
+                        <span>Ism</span>
+                        <input
+                          className="input"
+                          placeholder="HUSANOV"
+                          value={printPlayerName}
+                          onChange={(event) => setPrintPlayerName(cleanPrintName(event.target.value))}
+                          maxLength={14}
+                        />
+                      </label>
+                      <label>
+                        <span>Raqam</span>
+                        <input
+                          className="input"
+                          inputMode="numeric"
+                          placeholder="45"
+                          value={printNumber}
+                          onChange={(event) => setPrintNumber(cleanPrintNumber(event.target.value))}
+                          maxLength={2}
+                        />
+                      </label>
+                    </div>
+                    <div className="print-preview-strip">
+                      <span>Preview</span>
+                      <strong>{backPrintText}</strong>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -313,7 +354,7 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               {canCustomize && backPrint && (
                 <div>
                   <span>Yozuv</span>
-                  <strong>{printName || 'Ism raqam'}</strong>
+                  <strong>{backPrintText}</strong>
                 </div>
               )}
               <div>
@@ -373,4 +414,17 @@ function buildGalleryImages(product: Product) {
 function toPhotoSrc(value: string) {
   if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value
   return `/api/photo?file_id=${encodeURIComponent(value)}`
+}
+
+function cleanPrintName(value: string) {
+  return value
+    .toUpperCase()
+    .replace(/[^\p{L}'\-\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trimStart()
+    .slice(0, 14)
+}
+
+function cleanPrintNumber(value: string) {
+  return value.replace(/\D/g, '').slice(0, 2)
 }
