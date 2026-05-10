@@ -183,15 +183,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               <div className={totalStock <= 3 ? 'product-stock-badge product-stock-low' : 'product-stock-badge'}>
                 {stockLabel}
               </div>
-              {canCustomize && (
-                <div className={backPrint ? 'jersey-print-preview active' : 'jersey-print-preview'} aria-label="Ism va raqam preview">
-                  <span>LIVE PREVIEW</span>
-                  <div className="jersey-back-mini">
-                    <i />
-                    <strong>{previewName}</strong>
-                    <b>{previewNumber}</b>
-                  </div>
-                  <small>{backPrint ? "Forma orqasida shunday ko'rinadi" : 'Ism + raqamni yoqing'}</small>
+              {canCustomize && backPrint && (
+                <div className="jersey-image-print-overlay" aria-label="Forma ustidagi yozuv preview">
+                  <strong>{previewName}</strong>
+                  <b>{previewNumber}</b>
                 </div>
               )}
             </div>
