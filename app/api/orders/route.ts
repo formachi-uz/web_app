@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createOrder } from '@/lib/db'
+import pool, { createOrder } from '@/lib/db'
 import { notifyAdminError } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
@@ -50,6 +50,21 @@ async function sendTelegramMessage(chatId: string, text: string, orderId: number
   }
 }
 
+async function sendTelegramText(chatId: string | number, text: string): Promise<boolean> {
+  if (!BOT_TOKEN) return false
+  const base = `https://api.telegram.org/bot${BOT_TOKEN}`
+  try {
+    const res = await fetch(`${base}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 function chatCandidates(raw: string): string[] {
   const set = new Set<string>()
   for (const value of raw.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean)) {
@@ -65,10 +80,41 @@ function chatCandidates(raw: string): string[] {
   return [...set]
 }
 
+function normalizePhone(phone: string) {
+  return phone.replace(/\D/g, '')
+}
+
+async function findTelegramIdByPhone(phone: string): Promise<number | undefined> {
+  const normalized = normalizePhone(phone)
+  if (!normalized) return undefined
+  const tail = normalized.slice(-9)
+
+  for (const column of ['phone', 'phone_number']) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT telegram_id
+         FROM users
+         WHERE telegram_id > 0
+           AND (regexp_replace(COALESCE(${column}, ''), '\\D', '', 'g') = $1
+             OR right(regexp_replace(COALESCE(${column}, ''), '\\D', '', 'g'), 9) = $2)
+         ORDER BY id DESC
+         LIMIT 1`,
+        [normalized, tail]
+      )
+      const value = Number(rows[0]?.telegram_id)
+      if (value > 0) return value
+    } catch {
+      // Some deployments have only one of phone/phone_number columns.
+    }
+  }
+
+  return undefined
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { customer_name, customer_phone, address, payment_type, items, total } = body
+    const { customer_name, customer_phone, address, payment_type, items, total, telegram_id } = body
 
     if (!customer_name?.trim()) {
       return NextResponse.json({ error: 'Ism kiritilmagan' }, { status: 400 })
@@ -91,7 +137,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const customerTelegramId = Number(telegram_id) > 0
+      ? Number(telegram_id)
+      : await findTelegramIdByPhone(customer_phone.trim())
+
     const orderId = await createOrder({
+      telegram_id: customerTelegramId,
       customer_name: customer_name.trim(),
       customer_phone: customer_phone.trim(),
       address: address.trim(),
@@ -130,6 +181,15 @@ export async function POST(req: NextRequest) {
       `${'-'.repeat(28)}\n` +
       `<b>JAMI: ${Number(total).toLocaleString()} so'm</b>`
 
+    const customerText =
+      `<b>✅ Buyurtmangiz qabul qilindi!</b>\n` +
+      `${'-'.repeat(24)}\n` +
+      `Buyurtma: <b>#${orderId}</b>\n` +
+      `Jami: <b>${Number(total).toLocaleString()} so'm</b>\n` +
+      `To'lov: ${paymentLabel}\n\n` +
+      `Admin buyurtmangizni ko'rib chiqadi va tez orada aloqaga chiqadi.\n` +
+      `📦 Mahsulot qo'lingizga yetgach <b>Buyurtmalarim</b> bo'limidan <b>Mahsulotni oldim</b> tugmasini bosishni unutmang.`
+
     const candidates = chatCandidates(GROUP_ORDERS)
     let groupOk = false
     for (const chatId of candidates) {
@@ -152,11 +212,23 @@ export async function POST(req: NextRequest) {
       adminOk = await sendTelegramMessage(ADMIN_ID, adminText, orderId, firstPhoto)
     }
 
+    let customerOk = false
+    if (customerTelegramId) {
+      customerOk = await sendTelegramText(customerTelegramId, customerText)
+      if (!customerOk) {
+        await notifyAdminError('Order customer notify failed', new Error('Customer Telegram message failed'), {
+          order_id: orderId,
+          telegram_id: customerTelegramId,
+        })
+      }
+    }
+
     return NextResponse.json({
       success: true,
       order_id: orderId,
       group_notified: groupOk,
       admin_notified: adminOk,
+      customer_notified: customerOk,
     })
   } catch (error) {
     console.error('Orders API error:', error)
